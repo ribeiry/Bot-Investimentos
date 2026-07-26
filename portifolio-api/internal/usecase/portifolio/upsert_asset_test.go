@@ -11,18 +11,13 @@ import (
 
 func TestUpsertAsset_Success(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	asset := domain.Asset{
-		Ticker:       "BBSE3",
-		Market:       "B3",
-		Quantity:     100,
-		AveragePrice: 38.50,
-	}
-
-	assetRepo.On("Upsert", asset).Return(nil)
+	asset := domain.Asset{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50}
+	assetRepo.On("Upsert", userID, asset).Return(nil)
 
 	usecase := NewUpsertAssetUseCase(assetRepo)
-	err := usecase.Execute(asset)
+	err := usecase.Execute(userID, asset)
 
 	assert.NoError(t, err)
 	assetRepo.AssertExpectations(t)
@@ -30,16 +25,12 @@ func TestUpsertAsset_Success(t *testing.T) {
 
 func TestUpsertAsset_TickerVazio(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	asset := domain.Asset{
-		Ticker:       "",
-		Market:       "B3",
-		Quantity:     100,
-		AveragePrice: 38.50,
-	}
+	asset := domain.Asset{Ticker: "", Market: "B3", Quantity: 100, AveragePrice: 38.50}
 
 	usecase := NewUpsertAssetUseCase(assetRepo)
-	err := usecase.Execute(asset)
+	err := usecase.Execute(userID, asset)
 
 	assert.Error(t, err)
 	assetRepo.AssertNotCalled(t, "Upsert")
@@ -47,16 +38,12 @@ func TestUpsertAsset_TickerVazio(t *testing.T) {
 
 func TestUpsertAsset_QuantidadeInvalida(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	asset := domain.Asset{
-		Ticker:       "BBSE3",
-		Market:       "B3",
-		Quantity:     0,
-		AveragePrice: 38.50,
-	}
+	asset := domain.Asset{Ticker: "BBSE3", Market: "B3", Quantity: 0, AveragePrice: 38.50}
 
 	usecase := NewUpsertAssetUseCase(assetRepo)
-	err := usecase.Execute(asset)
+	err := usecase.Execute(userID, asset)
 
 	assert.Error(t, err)
 	assetRepo.AssertNotCalled(t, "Upsert")
@@ -64,16 +51,12 @@ func TestUpsertAsset_QuantidadeInvalida(t *testing.T) {
 
 func TestUpsertAsset_PrecoInvalido(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	asset := domain.Asset{
-		Ticker:       "BBSE3",
-		Market:       "B3",
-		Quantity:     100,
-		AveragePrice: 0,
-	}
+	asset := domain.Asset{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 0}
 
 	usecase := NewUpsertAssetUseCase(assetRepo)
-	err := usecase.Execute(asset)
+	err := usecase.Execute(userID, asset)
 
 	assert.Error(t, err)
 	assetRepo.AssertNotCalled(t, "Upsert")
@@ -81,35 +64,27 @@ func TestUpsertAsset_PrecoInvalido(t *testing.T) {
 
 func TestUpsertAsset_MercadoInvalido(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	asset := domain.Asset{
-		Ticker:       "BBSE3",
-		Market:       "INVALID",
-		Quantity:     100,
-		AveragePrice: 38.50,
-	}
+	asset := domain.Asset{Ticker: "BBSE3", Market: "INVALID", Quantity: 100, AveragePrice: 38.50}
 
 	usecase := NewUpsertAssetUseCase(assetRepo)
-	err := usecase.Execute(asset)
+	err := usecase.Execute(userID, asset)
 
 	assert.Error(t, err)
 	assetRepo.AssertExpectations(t)
 }
+
 func TestUpsertAsset_RepError(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	asset := domain.Asset{
-		Ticker:       "BBSE3",
-		Market:       "B3",
-		Quantity:     100,
-		AveragePrice: 38.50,
-	}
-
-	assetRepo.On("Upsert", asset).Return(errors.New("db error"))
+	asset := domain.Asset{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50}
+	assetRepo.On("Upsert", userID, asset).Return(errors.New("db error"))
 
 	usecase := NewUpsertAssetUseCase(assetRepo)
-	err := usecase.Execute(asset)
+	err := usecase.Execute(userID, asset)
 
 	assert.Error(t, err)
 	assetRepo.AssertExpectations(t)
-} // ← garante que esse } está aqui
+}

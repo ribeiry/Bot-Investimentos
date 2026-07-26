@@ -13,15 +13,14 @@ func NewUpsertAssetUseCase(assetRepo domain.AssetRepository) UpsertAssetUseCase 
 	return UpsertAssetUseCase{assetRepo: assetRepo}
 }
 
-func (u UpsertAssetUseCase) Execute(asset domain.Asset) error {
+func (u UpsertAssetUseCase) Execute(userID int64, asset domain.Asset) error {
 	if err := u.validate(asset); err != nil {
 		return err
 	}
-	return u.assetRepo.Upsert(asset)
+	return u.assetRepo.Upsert(userID, asset)
 }
 
 func (u UpsertAssetUseCase) validate(asset domain.Asset) error {
-
 	if asset.Ticker == "" {
 		return errors.New("Error the Ticker is nill or Empty")
 	}

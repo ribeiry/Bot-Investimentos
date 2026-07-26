@@ -10,11 +10,12 @@ import (
 
 func TestDeleteAsset_Success(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	assetRepo.On("DeleteByTicker", "BBSE3").Return(nil)
+	assetRepo.On("DeleteByTicker", userID, "BBSE3").Return(nil)
 
 	usecase := NewDeleteAssetUseCase(assetRepo)
-	err := usecase.Execute("BBSE3")
+	err := usecase.Execute(userID, "BBSE3")
 
 	assert.NoError(t, err)
 	assetRepo.AssertExpectations(t)
@@ -22,9 +23,10 @@ func TestDeleteAsset_Success(t *testing.T) {
 
 func TestDeleteAsset_TickerVazio(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
 	usecase := NewDeleteAssetUseCase(assetRepo)
-	err := usecase.Execute("")
+	err := usecase.Execute(userID, "")
 
 	assert.Error(t, err)
 	assetRepo.AssertNotCalled(t, "DeleteByTicker")
@@ -32,11 +34,12 @@ func TestDeleteAsset_TickerVazio(t *testing.T) {
 
 func TestDeleteAsset_RepoError(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
 
-	assetRepo.On("DeleteByTicker", "BBSE3").Return(errors.New("db error"))
+	assetRepo.On("DeleteByTicker", userID, "BBSE3").Return(errors.New("db error"))
 
 	usecase := NewDeleteAssetUseCase(assetRepo)
-	err := usecase.Execute("BBSE3")
+	err := usecase.Execute(userID, "BBSE3")
 
 	assert.Error(t, err)
 	assetRepo.AssertExpectations(t)

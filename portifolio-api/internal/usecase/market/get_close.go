@@ -14,19 +14,15 @@ func NewGetCloseUseCase(assetRepo domain.AssetRepository, marketProvider domain.
 	return GetCloseUseCase{assetRepo: assetRepo, marketProvider: marketProvider}
 }
 
-func (g GetCloseUseCase) Execute(market string) ([]domain.Quote, error) {
-
+func (g GetCloseUseCase) Execute(userID int64, market string) ([]domain.Quote, error) {
 	if err := g.validate(market); err != nil {
 		return nil, err
 	}
-	assetsRepo, err := g.assetRepo.ReturnAllPortfolio()
-
+	assets, err := g.assetRepo.ReturnAllPortfolio(userID)
 	if err != nil {
 		return nil, err
 	}
-
-	return g.marketProvider.GetByTickers(assetsRepo)
-
+	return g.marketProvider.GetByTickers(assets)
 }
 
 func (g GetCloseUseCase) validate(market string) error {

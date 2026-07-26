@@ -13,17 +13,13 @@ type AssetRepository struct {
 	mock.Mock
 }
 
-// DeleteByTicker provides a mock function with given fields: ticker
-func (_m *AssetRepository) DeleteByTicker(ticker string) error {
-	ret := _m.Called(ticker)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteByTicker")
-	}
+// DeleteByTicker provides a mock function with given fields: userID, ticker
+func (_m *AssetRepository) DeleteByTicker(userID int64, ticker string) error {
+	ret := _m.Called(userID, ticker)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(ticker)
+	if rf, ok := ret.Get(0).(func(int64, string) error); ok {
+		r0 = rf(userID, ticker)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -31,29 +27,25 @@ func (_m *AssetRepository) DeleteByTicker(ticker string) error {
 	return r0
 }
 
-// ReturnAllPortfolio provides a mock function with given fields:
-func (_m *AssetRepository) ReturnAllPortfolio() ([]domain.Asset, error) {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for ReturnAllPortfolio")
-	}
+// ReturnAllPortfolio provides a mock function with given fields: userID
+func (_m *AssetRepository) ReturnAllPortfolio(userID int64) ([]domain.Asset, error) {
+	ret := _m.Called(userID)
 
 	var r0 []domain.Asset
 	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]domain.Asset, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(int64) ([]domain.Asset, error)); ok {
+		return rf(userID)
 	}
-	if rf, ok := ret.Get(0).(func() []domain.Asset); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(int64) []domain.Asset); ok {
+		r0 = rf(userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]domain.Asset)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(int64) error); ok {
+		r1 = rf(userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -61,29 +53,25 @@ func (_m *AssetRepository) ReturnAllPortfolio() ([]domain.Asset, error) {
 	return r0, r1
 }
 
-// ReturnAssetPortfolio provides a mock function with given fields: ticker
-func (_m *AssetRepository) ReturnAssetPortfolio(ticker string) (*domain.Asset, error) {
-	ret := _m.Called(ticker)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ReturnAssetPortfolio")
-	}
+// ReturnAssetPortfolio provides a mock function with given fields: userID, ticker
+func (_m *AssetRepository) ReturnAssetPortfolio(userID int64, ticker string) (*domain.Asset, error) {
+	ret := _m.Called(userID, ticker)
 
 	var r0 *domain.Asset
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (*domain.Asset, error)); ok {
-		return rf(ticker)
+	if rf, ok := ret.Get(0).(func(int64, string) (*domain.Asset, error)); ok {
+		return rf(userID, ticker)
 	}
-	if rf, ok := ret.Get(0).(func(string) *domain.Asset); ok {
-		r0 = rf(ticker)
+	if rf, ok := ret.Get(0).(func(int64, string) *domain.Asset); ok {
+		r0 = rf(userID, ticker)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*domain.Asset)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(ticker)
+	if rf, ok := ret.Get(1).(func(int64, string) error); ok {
+		r1 = rf(userID, ticker)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -91,17 +79,13 @@ func (_m *AssetRepository) ReturnAssetPortfolio(ticker string) (*domain.Asset, e
 	return r0, r1
 }
 
-// Upsert provides a mock function with given fields: asset
-func (_m *AssetRepository) Upsert(asset domain.Asset) error {
-	ret := _m.Called(asset)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Upsert")
-	}
+// Upsert provides a mock function with given fields: userID, asset
+func (_m *AssetRepository) Upsert(userID int64, asset domain.Asset) error {
+	ret := _m.Called(userID, asset)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(domain.Asset) error); ok {
-		r0 = rf(asset)
+	if rf, ok := ret.Get(0).(func(int64, domain.Asset) error); ok {
+		r0 = rf(userID, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -110,15 +94,12 @@ func (_m *AssetRepository) Upsert(asset domain.Asset) error {
 }
 
 // NewAssetRepository creates a new instance of AssetRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-// The first argument is typically a *testing.T value.
 func NewAssetRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *AssetRepository {
 	mock := &AssetRepository{}
 	mock.Mock.Test(t)
-
 	t.Cleanup(func() { mock.AssertExpectations(t) })
-
 	return mock
 }

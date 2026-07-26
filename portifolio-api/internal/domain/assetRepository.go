@@ -1,8 +1,8 @@
 package domain
 
 type AssetRepository interface {
-	Upsert(asset Asset) error
-	ReturnAllPortfolio() ([]Asset, error)
-	ReturnAssetPortfolio(ticker string) (*Asset, error)
-	DeleteByTicker(ticker string) error
+	Upsert(userID int64, asset Asset) error
+	ReturnAllPortfolio(userID int64) ([]Asset, error)
+	ReturnAssetPortfolio(userID int64, ticker string) (*Asset, error)
+	DeleteByTicker(userID int64, ticker string) error
 }

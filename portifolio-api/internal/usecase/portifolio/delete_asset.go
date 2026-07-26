@@ -13,9 +13,9 @@ func NewDeleteAssetUseCase(assetRepo domain.AssetRepository) DeleteAssetUseCase 
 	return DeleteAssetUseCase{assetRepo: assetRepo}
 }
 
-func (d DeleteAssetUseCase) Execute(Ticker string) error {
-	if Ticker == "" {
+func (d DeleteAssetUseCase) Execute(userID int64, ticker string) error {
+	if ticker == "" {
 		return errors.New("Ticker doesnt not blank")
 	}
-	return d.assetRepo.DeleteByTicker(Ticker)
+	return d.assetRepo.DeleteByTicker(userID, ticker)
 }

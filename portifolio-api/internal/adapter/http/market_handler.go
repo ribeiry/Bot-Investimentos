@@ -8,15 +8,11 @@ import (
 )
 
 type MarketHandler struct {
-	// quatro usecases aqui
 	getClosed market.GetCloseUseCase
 	getPrice  market.GetPricesUseCase
 }
 
-func NewMarketHandler(getClose market.GetCloseUseCase,
-	getPrices market.GetPricesUseCase,
-) *MarketHandler {
-
+func NewMarketHandler(getClose market.GetCloseUseCase, getPrices market.GetPricesUseCase) *MarketHandler {
 	return &MarketHandler{
 		getClosed: getClose,
 		getPrice:  getPrices,
@@ -24,20 +20,22 @@ func NewMarketHandler(getClose market.GetCloseUseCase,
 }
 
 func (m MarketHandler) GetCloseMarket(c *gin.Context) {
-	market := c.Query("market")
-	quotes, error := m.getClosed.Execute(market)
-	if error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": error.Error()})
+	userID := c.GetInt64("userID")
+	mkt := c.Query("market")
+	quotes, err := m.getClosed.Execute(userID, mkt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, quotes)
 }
 
 func (m MarketHandler) GetPriceMarket(c *gin.Context) {
-	quotesPrices, error := m.getPrice.Execute()
-	if error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": error.Error()})
+	userID := c.GetInt64("userID")
+	quotes, err := m.getPrice.Execute(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, quotesPrices)
+	c.JSON(http.StatusOK, quotes)
 }

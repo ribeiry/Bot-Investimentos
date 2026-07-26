@@ -11,27 +11,24 @@ func NewGetPerformanceUseCase(assetRepo domain.AssetRepository, marketProvider d
 	return GetPerformanceUseCase{assetRepo: assetRepo, marketProvider: marketProvider}
 }
 
-func (g GetPerformanceUseCase) Execute() ([]domain.AssetPerformance, error) {
-
-	assets, error := g.assetRepo.ReturnAllPortfolio()
-
-	if error != nil {
-		return nil, error
+func (g GetPerformanceUseCase) Execute(userID int64) ([]domain.AssetPerformance, error) {
+	assets, err := g.assetRepo.ReturnAllPortfolio(userID)
+	if err != nil {
+		return nil, err
 	}
 
-	quotes, error := g.marketProvider.GetByTickers(assets)
-	if error != nil {
-		return nil, error
+	quotes, err := g.marketProvider.GetByTickers(assets)
+	if err != nil {
+		return nil, err
 	}
+
 	quoteMap := make(map[string]domain.Quote)
 	for _, quote := range quotes {
 		quoteMap[quote.Ticker] = quote
-
 	}
 
 	var performances []domain.AssetPerformance
 	for _, asset := range assets {
-
 		valorInvestido := asset.Quantity * asset.AveragePrice
 		valorAtual := asset.Quantity * quoteMap[asset.Ticker].CurrentValue
 		valorDiferencaAtual := valorAtual - valorInvestido
@@ -51,5 +48,4 @@ func (g GetPerformanceUseCase) Execute() ([]domain.AssetPerformance, error) {
 	}
 
 	return performances, nil
-
 }

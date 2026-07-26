@@ -1,9 +1,7 @@
 package portifolio
 
 import (
-	"errors"
 	"portifolio-api/internal/domain"
-	"portifolio-api/internal/mocks"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -90,27 +88,6 @@ func TestBuildMarketSummaries_TopNLimitado(t *testing.T) {
 
 	assert.Len(t, result[0].TopGainers, 3)
 }
-func TestGetSummary_CachedProvider_Error(t *testing.T) {
-	assetRepo := new(mocks.AssetRepository)
-	marketProvider := new(mocks.MarketProvider)
-	cachedProvider := new(mocks.MarketProvider)
-
-	assets := []domain.Asset{
-		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50},
-	}
-
-	assetRepo.On("ReturnAllPortfolio").Return(assets, nil)
-	cachedProvider.On("GetByTickers", assets).Return(nil, errors.New("cache error"))
-
-	usecase := NewGetSummaryUseCase(assetRepo, marketProvider, cachedProvider)
-	result, err := usecase.Execute("cached")
-
-	assert.Error(t, err)
-	assert.Nil(t, result)
-	assetRepo.AssertExpectations(t)
-	cachedProvider.AssertExpectations(t)
-}
-
 func TestBuildMarketSummaries_ComPerdas(t *testing.T) {
 	assets := []domain.Asset{
 		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 40.00},

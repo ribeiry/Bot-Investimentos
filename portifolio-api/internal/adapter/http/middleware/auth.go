@@ -2,21 +2,24 @@ package middleware
 
 import (
 	"net/http"
-	"os"
+	"portifolio-api/internal/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Auth() gin.HandlerFunc {
+func Auth(userRepo domain.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-API-Key")
-		expectedKey := os.Getenv("API_KEY")
-
-		if apiKey == expectedKey {
-			c.Next()
-		} else {
+		if apiKey == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-
+			return
 		}
+		user, err := userRepo.FindByAPIKey(apiKey)
+		if err != nil || user == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		c.Set("userID", user.ID)
+		c.Next()
 	}
 }

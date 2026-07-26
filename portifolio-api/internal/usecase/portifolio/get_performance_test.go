@@ -12,19 +12,16 @@ import (
 func TestGetPerformance_Success(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
 	marketProvider := new(mocks.MarketProvider)
+	const userID int64 = 1
 
-	assets := []domain.Asset{
-		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50},
-	}
-	quotes := []domain.Quote{
-		{Ticker: "BBSE3", CurrentValue: 40.00},
-	}
+	assets := []domain.Asset{{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50}}
+	quotes := []domain.Quote{{Ticker: "BBSE3", CurrentValue: 40.00}}
 
-	assetRepo.On("ReturnAllPortfolio").Return(assets, nil)
+	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)
 	marketProvider.On("GetByTickers", assets).Return(quotes, nil)
 
 	usecase := NewGetPerformanceUseCase(assetRepo, marketProvider)
-	result, err := usecase.Execute()
+	result, err := usecase.Execute(userID)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -42,11 +39,12 @@ func TestGetPerformance_Success(t *testing.T) {
 func TestGetPerformance_RepoError(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
 	marketProvider := new(mocks.MarketProvider)
+	const userID int64 = 1
 
-	assetRepo.On("ReturnAllPortfolio").Return(nil, errors.New("db error"))
+	assetRepo.On("ReturnAllPortfolio", userID).Return(nil, errors.New("db error"))
 
 	usecase := NewGetPerformanceUseCase(assetRepo, marketProvider)
-	result, err := usecase.Execute()
+	result, err := usecase.Execute(userID)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -56,16 +54,15 @@ func TestGetPerformance_RepoError(t *testing.T) {
 func TestGetPerformance_MarketProviderError(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
 	marketProvider := new(mocks.MarketProvider)
+	const userID int64 = 1
 
-	assets := []domain.Asset{
-		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50},
-	}
+	assets := []domain.Asset{{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50}}
 
-	assetRepo.On("ReturnAllPortfolio").Return(assets, nil)
+	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)
 	marketProvider.On("GetByTickers", assets).Return(nil, errors.New("api error"))
 
 	usecase := NewGetPerformanceUseCase(assetRepo, marketProvider)
-	result, err := usecase.Execute()
+	result, err := usecase.Execute(userID)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)

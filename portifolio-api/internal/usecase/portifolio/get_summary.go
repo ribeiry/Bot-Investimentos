@@ -18,54 +18,34 @@ func NewGetSummaryUseCase(assetRepo domain.AssetRepository, marketProvider domai
 		cachedProvider: cachedProvider,
 	}
 }
-func (g GetSummaryUseCase) Execute(mode string) (*domain.PortfolioSummary, error) {
 
-	assets, err := g.assetRepo.ReturnAllPortfolio()
-
+func (g GetSummaryUseCase) Execute(userID int64, mode string) (*domain.PortfolioSummary, error) {
+	assets, err := g.assetRepo.ReturnAllPortfolio(userID)
 	if err != nil {
 		return nil, err
 	}
+
+	provider := g.cachedProvider
 	if mode == "realtime" {
-
-		quotes, err := g.marketProvider.GetByTickers(assets)
-
-		if err != nil {
-			return nil, err
-		}
-		quoteMap := make(map[string]domain.Quote)
-		////monta a lista de tickers para consultar o Yahoo Finance
-		for _, quote := range quotes {
-			quoteMap[quote.Ticker] = quote
-		}
-		summaries := buildMarketSummaries(assets, func(ticker string) float64 {
-			return quoteMap[ticker].CurrentValue
-		})
-
-		summary := &domain.PortfolioSummary{
-			MarketSummary: summaries,
-			QuotedAt:      time.Now(),
-		}
-
-		return summary, nil
-	} else {
-		quotes, err := g.cachedProvider.GetByTickers(assets)
-		if err != nil {
-			return nil, err
-		}
-
-		quoteMap := make(map[string]domain.Quote)
-		for _, quote := range quotes {
-			quoteMap[quote.Ticker] = quote
-		}
-
-		summaries := buildMarketSummaries(assets, func(ticker string) float64 {
-			return quoteMap[ticker].CurrentValue
-		})
-
-		summary := &domain.PortfolioSummary{
-			MarketSummary: summaries,
-			QuotedAt:      time.Now(),
-		}
-		return summary, nil
+		provider = g.marketProvider
 	}
+
+	quotes, err := provider.GetByTickers(assets)
+	if err != nil {
+		return nil, err
+	}
+
+	quoteMap := make(map[string]domain.Quote)
+	for _, quote := range quotes {
+		quoteMap[quote.Ticker] = quote
+	}
+
+	summaries := buildMarketSummaries(assets, func(ticker string) float64 {
+		return quoteMap[ticker].CurrentValue
+	})
+
+	return &domain.PortfolioSummary{
+		MarketSummary: summaries,
+		QuotedAt:      time.Now(),
+	}, nil
 }
