@@ -13,6 +13,7 @@ import (
 	inframarket "portifolio-api/internal/infra/market"
 	usecasemarket "portifolio-api/internal/usecase/market"
 
+	usecasealert "portifolio-api/internal/usecase/alert"
 	"portifolio-api/internal/usecase/portifolio"
 	usecaseuser "portifolio-api/internal/usecase/user"
 
@@ -44,6 +45,7 @@ func Run() {
 
 	portifolioRepo := repository.NewPortfolioRepository(database)
 	userRepo := repository.NewUserRepository(database)
+	alertRepo := repository.NewAlertRepository(database)
 
 	log.Println("Iniciando o Portifolio UseCase")
 	upsertUseCase := portifolio.NewUpsertAssetUseCase(portifolioRepo)
@@ -58,11 +60,18 @@ func Run() {
 
 	createUserUseCase := usecaseuser.NewCreateUserUseCase(userRepo)
 
+	upsertAlertUseCase := usecasealert.NewUpsertAlertUseCase(alertRepo)
+	deleteAlertUseCase := usecasealert.NewDeleteAlertUseCase(alertRepo)
+	getAlertsUseCase := usecasealert.NewGetAlertsUseCase(alertRepo)
+	checkAlertsUseCase := usecasealert.NewCheckAlertsUseCase(alertRepo, marketProvider)
+
+	alertHandler := httphandler.NewAlertHandler(upsertAlertUseCase, deleteAlertUseCase, getAlertsUseCase, checkAlertsUseCase)
+
 	portfolioHandler := httphandler.NewPortfolioHandler(upsertUseCase, deleteAssetUseCase, getAssetUseCase, getSummaryUseCase, getPerformanceUseCase)
 	marketHandler := httphandler.NewMarketHandler(getCloseUseCase, getPriceUseCase)
 	userHandler := httphandler.NewUserHandler(createUserUseCase)
 
-	router := ConfigRoutes(portfolioHandler, marketHandler, userHandler, userRepo)
+	router := ConfigRoutes(portfolioHandler, marketHandler, userHandler, alertHandler, userRepo)
 	router.Run(":8080")
 }
 
@@ -70,6 +79,7 @@ func ConfigRoutes(
 	portfolioHandler *httphandler.PortfolioHandler,
 	marketHandler *httphandler.MarketHandler,
 	userHandler *httphandler.UserHandler,
+	alertHandler *httphandler.AlertHandler,
 	userRepo domain.UserRepository,
 ) *gin.Engine {
 	router := gin.Default()
@@ -94,6 +104,15 @@ func ConfigRoutes(
 	{
 		market.GET("/prices", marketHandler.GetPriceMarket)
 		market.GET("/close", marketHandler.GetCloseMarket)
+	}
+
+	alerts := router.Group("/alerts")
+	alerts.Use(middleware.Auth(userRepo))
+	{
+		alerts.GET("", alertHandler.GetAlerts)
+		alerts.POST("", alertHandler.UpsertAlert)
+		alerts.DELETE("/:ticker", alertHandler.DeleteAlert)
+		alerts.GET("/check", alertHandler.CheckAlerts)
 	}
 
 	router.GET("/health", func(c *gin.Context) {

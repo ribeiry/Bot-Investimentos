@@ -34,7 +34,7 @@ Priorizadas por ICE Score — revisar a cada sprint.
 
 | # | Feature | Impact | Confidence | Ease | Score | Justificativa |
 |---|---|---|---|---|---|---|
-| 1 | **Alertas de preço (stop gain/loss, variação %)** | 9 | 5 | 7 | **315** | Uso diário, reaproveita price_history existente, já está no roadmap |
+| 1 | **Alertas de preço (stop gain/loss, variação %)** | 9 | 5 | 7 | **315** | ✅ Concluído |
 | 2 | **Resumo semanal/mensal consolidado** | 5 | 4 | 8 | **160** | Extensão natural do relatório diário, reaproveita lógica com cron diferente |
 | 3 | **Comparação com benchmark (IBOV/S&P500)** | 7 | 3 | 5 | **105** | Contextualiza retorno absoluto, requer chamada de índice extra |
 | 4 | **Alocação por classe/setor** | 6 | 3 | 6 | **108** | Ajuda decisão de realocação, exige tag setor no ativo |
@@ -42,10 +42,12 @@ Priorizadas por ICE Score — revisar a cada sprint.
 
 ### Detalhamento Fase 3
 
-**1. Alertas de preço (stop gain/loss, variação %)**
-- Notificação via Telegram quando ativo atinge thresholds definidos pelo usuário
-- Requer: novo comando `/alerta` para cadastrar, storage de limites no BD, check na tarefa de atualização de preços
-- Risco: spam se alertas forem muito frequentes
+**1. Alertas de preço (stop gain/loss, variação %)** ✅ Concluído
+- `POST /alerts` — criar/atualizar alerta (stop_gain e/ou stop_loss)
+- `GET /alerts` — listar alertas ativos do usuário
+- `DELETE /alerts/:ticker` — remover alerta
+- `GET /alerts/check` — verifica preços atuais e retorna alertas disparados (chamar via n8n)
+- Tabela `alerts` com isolamento por `user_id`
 
 **2. Resumo semanal/mensal consolidado**
 - Agregar dados de múltiplos dias num só relatório de tendência
