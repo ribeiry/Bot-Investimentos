@@ -6,12 +6,14 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 
 ## 🚀 Funcionalidades
 
+- **Multiusuário** — cada usuário com carteira isolada via API key
 - Consulta de cotações em tempo real (B3 via Brapi, NYSE/NASDAQ via Twelve Data)
 - Cache de preços via SQLite para consultas instantâneas
 - Relatório diário automático às 18:30 (seg-sex)
 - 4 comandos via Telegram: `/status`, `/ativos`, `/resumo`, `/performance`
 - Cálculo de performance por ativo (valor investido, valor atual, lucro/prejuízo, retorno %)
 - Consolidação da carteira por mercado com Top Gainers e Top Losers
+- **Alertas de preço** — stop gain e stop loss por ativo, verificação sob demanda
 
 ---
 
@@ -20,7 +22,7 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 | Componente | Tecnologia |
 |---|---|
 | API | Go 1.23 + Gin |
-| Banco | SQLite (Fase 1) → PostgreSQL (Fase 2) |
+| Banco | SQLite (local) → PostgreSQL (produção) |
 | Harness | n8n |
 | Mensageria | Telegram Bot API |
 | Mercado B3 | Brapi.dev |
@@ -47,16 +49,20 @@ portifolio-api/
 │   ├── main.go
 │   └── server.go
 └── internal/
-    ├── domain/          ← entidades e interfaces
-    ├── usecase/         ← regras de negócio
-    │   ├── portfolio/
-    │   └── market/
-    ├── adapter/         ← handlers HTTP e repositórios
+    ├── domain/           ← entidades e interfaces
+    ├── usecase/          ← regras de negócio
+    │   ├── alert/
+    │   ├── market/
+    │   ├── portifolio/
+    │   └── user/
+    ├── adapter/          ← handlers HTTP e repositórios
     │   ├── http/
+    │   │   └── middleware/
     │   └── repository/
-    └── infra/           ← SQLite, Brapi, Twelve Data
-        ├── db/
-        └── market/
+    ├── infra/            ← SQLite, Brapi, Twelve Data
+    │   ├── db/
+    │   └── market/
+    └── mocks/            ← mocks gerados para testes
 ```
 
 ---
@@ -65,6 +71,7 @@ portifolio-api/
 
 ### 1. Pré-requisitos
 
+- Go 1.23+
 - Docker e Docker Compose
 - Conta no [Brapi](https://brapi.dev) — cotações B3
 - Conta no [Twelve Data](https://twelvedata.com) — cotações NYSE/NASDAQ
@@ -73,22 +80,32 @@ portifolio-api/
 
 ### 2. Variáveis de ambiente
 
-Cria um arquivo `.env` na raiz do projeto:
+Crie um arquivo `.env` na raiz de `portifolio-api/`:
 
 ```env
-API_KEY=seu-token-secreto
 BRAPI_TOKEN=seu-token-brapi
 TWELVE_DATA_KEY=seu-token-twelve-data
 TELEGRAM_CHAT_ID=seu-chat-id
 ```
 
-### 3. Subir os containers
+> **Nota:** não há mais `API_KEY` global — cada usuário tem sua própria chave gerada via `POST /users`.
+
+### 3. Rodar localmente
+
+```bash
+cd portifolio-api
+go run ./cmd/api
+```
+
+O banco SQLite é criado automaticamente em `./data/portfolio.db`. As migrations rodam na inicialização.
+
+### 4. Subir via Docker
 
 ```bash
 docker-compose up --build
 ```
 
-### 4. Expor o n8n via HTTPS
+### 5. Expor o n8n via HTTPS
 
 ```bash
 ngrok http 5678
@@ -102,44 +119,116 @@ n8n:
     - WEBHOOK_URL=https://xxxx.ngrok-free.app
 ```
 
-### 5. Configurar o n8n
-
-1. Acesse `http://localhost:5678`
-2. Crie a credencial do Telegram com o token do BotFather
-3. Importe os workflows (consulta sob demanda + fechamento automático)
-4. Ative os workflows
-
 ---
 
 ## 📡 Endpoints da API
 
+### Público
+
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/health` | Health check |
-| GET | `/portfolio/assets` | Lista todos os ativos |
-| POST | `/portfolio/assets` | Cadastra ou atualiza ativo |
-| DELETE | `/portfolio/assets/:ticker` | Remove ativo |
-| GET | `/portfolio/summary?mode=cached` | Resumo consolidado (cache) |
-| GET | `/portfolio/summary?mode=realtime` | Resumo consolidado (tempo real) |
-| GET | `/portfolio/performance` | Performance detalhada por ativo |
-| GET | `/market/prices` | Preços atuais de todos os ativos |
-| GET | `/market/close?market=B3` | Fechamento por mercado |
+| `GET` | `/health` | Health check |
+| `POST` | `/users` | Registra usuário e recebe API key |
 
-### Autenticação
+### Protegido — header `X-API-Key: <sua-key>`
 
-Todas as rotas (exceto `/health`) exigem o header:
+#### Portfolio
 
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/portfolio/assets` | Lista ativos do usuário |
+| `POST` | `/portfolio/assets` | Cadastra ou atualiza ativo |
+| `DELETE` | `/portfolio/assets/:ticker` | Remove ativo |
+| `GET` | `/portfolio/summary?mode=cached` | Resumo consolidado (cache) |
+| `GET` | `/portfolio/summary?mode=realtime` | Resumo consolidado (tempo real) |
+| `GET` | `/portfolio/performance` | Performance detalhada por ativo |
+
+#### Market
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/market/prices` | Preços atuais de todos os ativos |
+| `GET` | `/market/close?market=B3` | Fechamento por mercado (B3, NYSE, NASDAQ) |
+
+#### Alertas
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/alerts` | Lista alertas ativos |
+| `POST` | `/alerts` | Cria ou atualiza alerta de stop gain/loss |
+| `DELETE` | `/alerts/:ticker` | Remove alerta |
+| `GET` | `/alerts/check` | Verifica preços e retorna alertas disparados |
+
+> `GET /alerts/check` retorna `200` com lista de triggers ou `204 No Content` se nenhum foi disparado. Ideal para chamar via n8n periodicamente.
+
+---
+
+## 🔑 Autenticação
+
+O sistema é multiusuário. Cada usuário tem sua própria API key isolada.
+
+### 1. Registrar usuário
+
+```bash
+curl -s -X POST http://localhost:8080/users \
+  -H "Content-Type: application/json" \
+  -d '{"telegram_id": "123456", "name": "João"}' | jq
 ```
-X-API-Key: seu-token-secreto
+
+```json
+{
+  "id": 1,
+  "api_key": "a3f8c2d1...",
+  "name": "João"
+}
 ```
 
-### Exemplo de cadastro de ativo
+### 2. Usar a API key
+
+```bash
+curl http://localhost:8080/portfolio/assets \
+  -H "X-API-Key: a3f8c2d1..."
+```
+
+---
+
+## 📋 Exemplos de uso
+
+### Cadastrar ativo
 
 ```bash
 curl -X POST http://localhost:8080/portfolio/assets \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: seu-token" \
+  -H "X-API-Key: <sua-key>" \
   -d '{"ticker":"BBSE3","market":"B3","quantity":100,"average_price":38.50}'
+```
+
+### Criar alerta de stop gain e stop loss
+
+```bash
+curl -X POST http://localhost:8080/alerts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <sua-key>" \
+  -d '{"ticker":"BBSE3","market":"B3","stop_gain":45.00,"stop_loss":30.00}'
+```
+
+### Verificar alertas disparados
+
+```bash
+curl http://localhost:8080/alerts/check \
+  -H "X-API-Key: <sua-key>"
+```
+
+```json
+[
+  {
+    "ticker": "BBSE3",
+    "market": "B3",
+    "stop_gain": 45.00,
+    "current_price": 46.50,
+    "trigger_type": "STOP_GAIN"
+  }
+]
 ```
 
 ---
@@ -159,22 +248,27 @@ curl -X POST http://localhost:8080/portfolio/assets \
 
 ```bash
 # Rodar todos os testes
-go test ./internal/... -v
+cd portifolio-api
+go test ./... -v
 
-# Rodar com coverage
-go test ./internal/... -cover
+# Com coverage
+go test ./... -cover
 
-# Ver coverage detalhado
+# Coverage detalhado por pacote
 go test ./internal/usecase/... -coverprofile=coverage.out
 go tool cover -html=coverage.out
 ```
 
 ### Coverage atual
 
-| Pacote | Coverage |
+| Pacote | Testes |
 |---|---|
-| `usecase/portfolio` | 100% |
-| `usecase/market` | 100% |
+| `usecase/alert` | 17 testes |
+| `usecase/market` | 8 testes |
+| `usecase/portifolio` | 17 testes |
+| `usecase/user` | 4 testes |
+| `adapter/http/middleware` | 4 testes |
+| **Total** | **50 testes** |
 
 ---
 
@@ -183,13 +277,9 @@ go tool cover -html=coverage.out
 | Fase | Status | Descrição |
 |---|---|---|
 | Fase 1 — MVP | ✅ Concluída | API Go + n8n + Telegram + SQLite |
-| Fase 2 — Deploy | 🚧 Planejada | PostgreSQL + Multiusuário + Cloud |
-| Fase 3 — Alertas | 📋 Backlog | Alertas de preço, dividendos, stop gain/loss |
-| Fase 4 — LLM | 🤖 Backlog | Integração Claude API, resumos inteligentes |
+| Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL 📋 · Cloud 📋 |
+| Fase 3 — Alertas | 🚧 Em andamento | Stop gain/loss ✅ · Resumo semanal 📋 · Benchmark 📋 |
+| Fase 4 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes |
 
----
-
-## 📄 Documentação
-
+Detalhes e priorização: [BACKLOG.md](./BACKLOG.md)
 - [SDD — Spec-Driven Development](./SDD.md)
-- [BACKLOG.md](./BACKLOG.md)
