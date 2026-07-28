@@ -28,36 +28,38 @@ Detalhamento das fases de desenvolvimento com priorização por ICE Score (Impac
 
 ---
 
-## Fase 3 — Alertas 📋 Backlog
+## Fase 3 — Alertas 🚧 Em Andamento
 
 Priorizadas por ICE Score — revisar a cada sprint.
 
-| # | Feature | Impact | Confidence | Ease | Score | Justificativa |
+| # | Feature | Impact | Confidence | Ease | Score | Status |
 |---|---|---|---|---|---|---|
-| 1 | **Alertas de preço (stop gain/loss, variação %)** | 9 | 5 | 7 | **315** | ✅ Concluído |
-| 2 | **Resumo semanal/mensal consolidado** | 5 | 4 | 8 | **160** | Extensão natural do relatório diário, reaproveita lógica com cron diferente |
-| 3 | **Comparação com benchmark (IBOV/S&P500)** | 7 | 3 | 5 | **105** | Contextualiza retorno absoluto, requer chamada de índice extra |
-| 4 | **Alocação por classe/setor** | 6 | 3 | 6 | **108** | Ajuda decisão de realocação, exige tag setor no ativo |
-| 5 | **Notificação de dividendos** | 6 | 3 | 4 | **72** | Reforça avaliação de retorno, depende de Brapi/Twelve Data |
+| 1 | **Alertas de preço (stop gain/loss)** | 9 | 5 | 7 | **315** | ✅ Concluído |
+| 2 | **Resumo semanal/mensal consolidado** | 5 | 4 | 8 | **160** | ✅ Concluído |
+| 3 | **Comparação com benchmark (IBOV/S&P500)** | 7 | 3 | 5 | **105** | 📋 Backlog |
+| 4 | **Alocação por classe/setor** | 6 | 3 | 6 | **108** | 📋 Backlog |
+| 5 | **Notificação de dividendos** | 6 | 3 | 4 | **72** | 📋 Backlog |
 
 ### Detalhamento Fase 3
 
-**1. Alertas de preço (stop gain/loss, variação %)** ✅ Concluído
+**1. Alertas de preço (stop gain/loss)** ✅ Concluído
 - `POST /alerts` — criar/atualizar alerta (stop_gain e/ou stop_loss)
 - `GET /alerts` — listar alertas ativos do usuário
 - `DELETE /alerts/:ticker` — remover alerta
 - `GET /alerts/check` — verifica preços atuais e retorna alertas disparados (chamar via n8n)
 - Tabela `alerts` com isolamento por `user_id`
 
-**2. Resumo semanal/mensal consolidado**
-- Agregar dados de múltiplos dias num só relatório de tendência
-- Requer: job adicional no n8n (segunda-feira para semana, 1º dia mês para mês)
-- Custo: baixo, reaproveita queries de `portfolio/summary` existentes
+**2. Resumo semanal/mensal consolidado** ✅ Concluído
+- `GET /portfolio/period-summary?period=weekly` — variação da carteira desde segunda-feira
+- `GET /portfolio/period-summary?period=monthly` — variação da carteira desde dia 1 do mês
+- Busca preço histórico via tabela `price_history`; fallback para `average_price` se sem dados
+- Retorna por ativo: `price_start`, `price_current`, `change_value`, `change_percent`
+- Retorna totais: `total_value_start`, `total_value_current`, `total_change_value`, `total_change_percent`
 
 **3. Comparação com benchmark**
 - Buscar IBOV (B3) e S&P500 (NYSE/NASDAQ) nas mesmas APIs
 - Calcular retorno relativo: (carteira - benchmark) / benchmark × 100
-- Novo comando Telegram: `/benchmark`
+- Novo endpoint: `GET /portfolio/benchmark`
 
 **4. Alocação por classe/setor**
 - Campo novo no schema do ativo: `sector` (enum: "Tech", "Financeiro", "Energia", etc.)
@@ -99,10 +101,10 @@ Priorizadas por ICE Score — revisar a cada sprint.
 1. PostgreSQL — pré-requisito para produção real
 2. Cloud deployment — após migração de banco
 
-**Fase 3 — ordem recomendada:**
-1. Alertas de preço (maior ROI, reaproveita infra)
-2. Resumo semanal/mensal (fácil, incrementa valor)
-3. Comparação com benchmark (contexto importante)
+**Fase 3 — próximo:**
+1. ✅ Alertas de preço — concluído
+2. ✅ Resumo semanal/mensal — concluído
+3. Comparação com benchmark (próxima prioridade)
 4. Alocação por setor (requer catalogação)
 5. Dividendos (validar disponibilidade de dados)
 

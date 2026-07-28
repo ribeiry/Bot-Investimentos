@@ -14,6 +14,7 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 - Cálculo de performance por ativo (valor investido, valor atual, lucro/prejuízo, retorno %)
 - Consolidação da carteira por mercado com Top Gainers e Top Losers
 - **Alertas de preço** — stop gain e stop loss por ativo, verificação sob demanda
+- **Resumo semanal/mensal** — variação da carteira na semana ou no mês via price_history
 
 ---
 
@@ -88,7 +89,7 @@ TWELVE_DATA_KEY=seu-token-twelve-data
 TELEGRAM_CHAT_ID=seu-chat-id
 ```
 
-> **Nota:** não há mais `API_KEY` global — cada usuário tem sua própria chave gerada via `POST /users`.
+> **Nota:** não há `API_KEY` global — cada usuário tem sua própria chave gerada via `POST /users`.
 
 ### 3. Rodar localmente
 
@@ -132,6 +133,8 @@ n8n:
 
 ### Protegido — header `X-API-Key: <sua-key>`
 
+> Todas as respostas incluem `telegram_id` para o n8n saber para qual chat enviar.
+
 #### Portfolio
 
 | Método | Rota | Descrição |
@@ -142,6 +145,8 @@ n8n:
 | `GET` | `/portfolio/summary?mode=cached` | Resumo consolidado (cache) |
 | `GET` | `/portfolio/summary?mode=realtime` | Resumo consolidado (tempo real) |
 | `GET` | `/portfolio/performance` | Performance detalhada por ativo |
+| `GET` | `/portfolio/period-summary?period=weekly` | Variação da carteira na semana |
+| `GET` | `/portfolio/period-summary?period=monthly` | Variação da carteira no mês |
 
 #### Market
 
@@ -159,7 +164,7 @@ n8n:
 | `DELETE` | `/alerts/:ticker` | Remove alerta |
 | `GET` | `/alerts/check` | Verifica preços e retorna alertas disparados |
 
-> `GET /alerts/check` retorna `200` com lista de triggers ou `204 No Content` se nenhum foi disparado. Ideal para chamar via n8n periodicamente.
+> `GET /alerts/check` retorna `200` com lista de triggers ou `200` com `data: []` se nenhum disparado.
 
 ---
 
@@ -203,6 +208,34 @@ curl -X POST http://localhost:8080/portfolio/assets \
   -d '{"ticker":"BBSE3","market":"B3","quantity":100,"average_price":38.50}'
 ```
 
+### Resumo semanal
+
+```bash
+curl "http://localhost:8080/portfolio/period-summary?period=weekly" \
+  -H "X-API-Key: <sua-key>"
+```
+
+```json
+{
+  "telegram_id": "123456",
+  "data": {
+    "period": "weekly",
+    "period_start": "2026-07-21T00:00:00Z",
+    "assets": [
+      {
+        "ticker": "BBSE3",
+        "price_start": 40.00,
+        "price_current": 42.00,
+        "change_value": 200.00,
+        "change_percent": 5.0
+      }
+    ],
+    "total_change_value": 200.00,
+    "total_change_percent": 5.0
+  }
+}
+```
+
 ### Criar alerta de stop gain e stop loss
 
 ```bash
@@ -217,18 +250,6 @@ curl -X POST http://localhost:8080/alerts \
 ```bash
 curl http://localhost:8080/alerts/check \
   -H "X-API-Key: <sua-key>"
-```
-
-```json
-[
-  {
-    "ticker": "BBSE3",
-    "market": "B3",
-    "stop_gain": 45.00,
-    "current_price": 46.50,
-    "trigger_type": "STOP_GAIN"
-  }
-]
 ```
 
 ---
@@ -265,10 +286,11 @@ go tool cover -html=coverage.out
 |---|---|
 | `usecase/alert` | 17 testes |
 | `usecase/market` | 8 testes |
-| `usecase/portifolio` | 17 testes |
+| `usecase/portifolio` | 26 testes |
 | `usecase/user` | 4 testes |
+| `adapter/http` | 32 testes |
 | `adapter/http/middleware` | 4 testes |
-| **Total** | **50 testes** |
+| **Total** | **91 testes** |
 
 ---
 
@@ -278,8 +300,7 @@ go tool cover -html=coverage.out
 |---|---|---|
 | Fase 1 — MVP | ✅ Concluída | API Go + n8n + Telegram + SQLite |
 | Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL 📋 · Cloud 📋 |
-| Fase 3 — Alertas | 🚧 Em andamento | Stop gain/loss ✅ · Resumo semanal 📋 · Benchmark 📋 |
+| Fase 3 — Alertas | 🚧 Em andamento | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark 📋 |
 | Fase 4 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes |
 
 Detalhes e priorização: [BACKLOG.md](./BACKLOG.md)
-- [SDD — Spec-Driven Development](./SDD.md)
