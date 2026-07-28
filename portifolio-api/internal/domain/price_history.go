@@ -11,4 +11,5 @@ type PriceHistory struct {
 type PriceHistoryRepository interface {
 	Save(history PriceHistory) error
 	GetLastPrice(ticker string) (float64, error)
+	GetPriceAtDate(ticker string, date time.Time) (float64, error)
 }

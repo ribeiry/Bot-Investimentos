@@ -20,6 +20,7 @@ func Auth(userRepo domain.UserRepository) gin.HandlerFunc {
 			return
 		}
 		c.Set("userID", user.ID)
+		c.Set("telegramID", user.TelegramID)
 		c.Next()
 	}
 }

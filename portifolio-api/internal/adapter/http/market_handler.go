@@ -24,18 +24,18 @@ func (m MarketHandler) GetCloseMarket(c *gin.Context) {
 	mkt := c.Query("market")
 	quotes, err := m.getClosed.Execute(userID, mkt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, quotes)
+	respond(c, http.StatusOK, quotes)
 }
 
 func (m MarketHandler) GetPriceMarket(c *gin.Context) {
 	userID := c.GetInt64("userID")
 	quotes, err := m.getPrice.Execute(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, quotes)
+	respond(c, http.StatusOK, quotes)
 }

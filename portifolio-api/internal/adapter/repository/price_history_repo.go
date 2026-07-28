@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"portifolio-api/internal/domain"
+	"time"
 )
 
 type priceHistoryRepository struct {
@@ -26,6 +27,20 @@ func (r priceHistoryRepository) GetLastPrice(ticker string) (float64, error) {
 	err := r.db.QueryRow(
 		"SELECT price FROM price_history WHERE ticker = ? ORDER BY captured_at DESC LIMIT 1",
 		ticker,
+	).Scan(&price)
+	if err != nil {
+		return 0, err
+	}
+	return price, nil
+}
+
+func (r priceHistoryRepository) GetPriceAtDate(ticker string, date time.Time) (float64, error) {
+	var price float64
+	err := r.db.QueryRow(
+		`SELECT price FROM price_history
+		 WHERE ticker = ? AND captured_at <= ?
+		 ORDER BY captured_at DESC LIMIT 1`,
+		ticker, date,
 	).Scan(&price)
 	if err != nil {
 		return 0, err
