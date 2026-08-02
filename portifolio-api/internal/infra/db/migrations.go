@@ -18,6 +18,9 @@ func RunMigrations(db *sql.DB) error {
 	if err := migratePortfolioAddUserID(db); err != nil {
 		return err
 	}
+	if err := migratePortfolioAddSector(db); err != nil {
+		return err
+	}
 	return migrateUsersAddAPIKey(db)
 }
 
@@ -113,6 +116,14 @@ func migratePortfolioAddUserID(db *sql.DB) error {
 		}
 	}
 	return tx.Commit()
+}
+
+func migratePortfolioAddSector(db *sql.DB) error {
+	if hasColumn(db, "portfolio", "sector") {
+		return nil
+	}
+	_, err := db.Exec(`ALTER TABLE portfolio ADD COLUMN sector VARCHAR(50);`)
+	return err
 }
 
 // migrateUsersAddAPIKey adds the api_key column to users.

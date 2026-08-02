@@ -54,6 +54,8 @@ func Run() {
 	deleteAssetUseCase := portifolio.NewDeleteAssetUseCase(portifolioRepo)
 	getPerformanceUseCase := portifolio.NewGetPerformanceUseCase(portifolioRepo, marketProvider)
 	getPeriodSummaryUseCase := portifolio.NewGetPeriodSummaryUseCase(portifolioRepo, marketProvider, priceHistoryRepo)
+	getBenchmarkUseCase := portifolio.NewGetBenchmarkUseCase(portifolioRepo, marketProvider, priceHistoryRepo)
+	getAllocationUseCase := portifolio.NewGetAllocationUseCase(portifolioRepo, marketProvider)
 
 	log.Println("Iniciando o Market UseCase")
 	getPriceUseCase := usecasemarket.NewGetPricesUseCase(portifolioRepo, marketProvider)
@@ -68,7 +70,7 @@ func Run() {
 
 	alertHandler := httphandler.NewAlertHandler(upsertAlertUseCase, deleteAlertUseCase, getAlertsUseCase, checkAlertsUseCase)
 
-	portfolioHandler := httphandler.NewPortfolioHandler(upsertUseCase, deleteAssetUseCase, getAssetUseCase, getSummaryUseCase, getPerformanceUseCase, getPeriodSummaryUseCase)
+	portfolioHandler := httphandler.NewPortfolioHandler(upsertUseCase, deleteAssetUseCase, getAssetUseCase, getSummaryUseCase, getPerformanceUseCase, getPeriodSummaryUseCase, getBenchmarkUseCase, getAllocationUseCase)
 	marketHandler := httphandler.NewMarketHandler(getCloseUseCase, getPriceUseCase)
 	userHandler := httphandler.NewUserHandler(createUserUseCase)
 
@@ -99,6 +101,8 @@ func ConfigRoutes(
 		portfolio.GET("/summary", portfolioHandler.GetSummaryAsset)
 		portfolio.GET("/performance", portfolioHandler.GetPerformance)
 		portfolio.GET("/period-summary", portfolioHandler.GetPeriodSummary)
+		portfolio.GET("/benchmark", portfolioHandler.GetBenchmark)
+		portfolio.GET("/allocation", portfolioHandler.GetAllocation)
 	}
 
 	market := router.Group("/market")

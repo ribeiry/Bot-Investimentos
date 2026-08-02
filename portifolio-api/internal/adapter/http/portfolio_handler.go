@@ -15,6 +15,8 @@ type PortfolioHandler struct {
 	getSummary       portifolio.GetSummaryUseCase
 	getPerformance   portifolio.GetPerformanceUseCase
 	getPeriodSummary portifolio.GetPeriodSummaryUseCase
+	getBenchmark     portifolio.GetBenchmarkUseCase
+	getAllocation    portifolio.GetAllocationUseCase
 }
 
 func NewPortfolioHandler(
@@ -24,6 +26,8 @@ func NewPortfolioHandler(
 	getSummary portifolio.GetSummaryUseCase,
 	getPerformance portifolio.GetPerformanceUseCase,
 	getPeriodSummary portifolio.GetPeriodSummaryUseCase,
+	getBenchmark portifolio.GetBenchmarkUseCase,
+	getAllocation portifolio.GetAllocationUseCase,
 ) *PortfolioHandler {
 	return &PortfolioHandler{
 		upsert:           upsert,
@@ -32,6 +36,8 @@ func NewPortfolioHandler(
 		getSummary:       getSummary,
 		getPerformance:   getPerformance,
 		getPeriodSummary: getPeriodSummary,
+		getBenchmark:     getBenchmark,
+		getAllocation:    getAllocation,
 	}
 }
 
@@ -88,6 +94,27 @@ func (h PortfolioHandler) GetPerformance(c *gin.Context) {
 		return
 	}
 	respond(c, http.StatusOK, performance)
+}
+
+func (h PortfolioHandler) GetAllocation(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	result, err := h.getAllocation.Execute(userID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, err)
+		return
+	}
+	respond(c, http.StatusOK, result)
+}
+
+func (h PortfolioHandler) GetBenchmark(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	period := c.Query("period")
+	result, err := h.getBenchmark.Execute(userID, period)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	respond(c, http.StatusOK, result)
 }
 
 func (h PortfolioHandler) GetPeriodSummary(c *gin.Context) {

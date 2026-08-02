@@ -27,6 +27,8 @@ func setupPortfolioRouter(h *PortfolioHandler) *gin.Engine {
 	r.GET("/portfolio/summary", h.GetSummaryAsset)
 	r.GET("/portfolio/performance", h.GetPerformance)
 	r.GET("/portfolio/period-summary", h.GetPeriodSummary)
+	r.GET("/portfolio/benchmark", h.GetBenchmark)
+	r.GET("/portfolio/allocation", h.GetAllocation)
 	return r
 }
 
@@ -37,7 +39,9 @@ func buildPortfolioHandler(assetRepo *mocks.AssetRepository, marketProvider *moc
 	getSummary := portifolio.NewGetSummaryUseCase(assetRepo, marketProvider, marketProvider)
 	getPerformance := portifolio.NewGetPerformanceUseCase(assetRepo, marketProvider)
 	getPeriodSummary := portifolio.NewGetPeriodSummaryUseCase(assetRepo, marketProvider, priceHistory)
-	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary)
+	getBenchmark := portifolio.NewGetBenchmarkUseCase(assetRepo, marketProvider, priceHistory)
+	getAllocation := portifolio.NewGetAllocationUseCase(assetRepo, marketProvider)
+	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation)
 }
 
 // ─── GetAssets ───────────────────────────────────────────────────────────────
@@ -271,6 +275,108 @@ func TestPortfolioHandler_GetPeriodSummary_PeriodoInvalido(t *testing.T) {
 	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/portfolio/period-summary?period=yearly", nil)
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assetRepo.AssertNotCalled(t, "ReturnAllPortfolio")
+}
+
+// ─── GetBenchmark ────────────────────────────────────────────────────────────
+
+func TestPortfolioHandler_GetBenchmark_Success(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	assets := []domain.Asset{{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.00}}
+	portfolioQuotes := []domain.Quote{{Ticker: "BBSE3", CurrentValue: 42.00}}
+	benchAssets := []domain.Asset{
+		{Ticker: "^BVSP", Market: "B3"},
+		{Ticker: "SPX", Market: "NYSE"},
+	}
+	benchQuotes := []domain.Quote{
+		{Ticker: "^BVSP", CurrentValue: 130000.00},
+		{Ticker: "SPX", CurrentValue: 5500.00},
+	}
+
+	assetRepo.On("ReturnAllPortfolio", testUserID).Return(assets, nil)
+	marketProvider.On("GetByTickers", assets).Return(portfolioQuotes, nil)
+	marketProvider.On("GetByTickers", benchAssets).Return(benchQuotes, nil)
+	priceHistory.On("GetPriceAtDate", "BBSE3", mock.AnythingOfType("time.Time")).Return(40.00, nil)
+	priceHistory.On("GetPriceAtDate", "^BVSP", mock.AnythingOfType("time.Time")).Return(125000.00, nil)
+	priceHistory.On("GetPriceAtDate", "SPX", mock.AnythingOfType("time.Time")).Return(5000.00, nil)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/portfolio/benchmark?period=weekly", nil)
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assert.Contains(t, w.Body.String(), "portfolio_return_percent")
+	assert.Contains(t, w.Body.String(), "IBOV")
+	assert.Contains(t, w.Body.String(), "SPX")
+	assetRepo.AssertExpectations(t)
+}
+
+// ─── GetAllocation ───────────────────────────────────────────────────────────
+
+func TestPortfolioHandler_GetAllocation_Success(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	assets := []domain.Asset{
+		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.00, Sector: "Financeiro"},
+	}
+	quotes := []domain.Quote{
+		{Ticker: "BBSE3", CurrentValue: 40.00, Sector: "Financeiro"},
+	}
+
+	assetRepo.On("ReturnAllPortfolio", testUserID).Return(assets, nil)
+	marketProvider.On("GetByTickers", assets).Return(quotes, nil)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/portfolio/allocation", nil)
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assert.Contains(t, w.Body.String(), "Financeiro")
+	assetRepo.AssertExpectations(t)
+}
+
+func TestPortfolioHandler_GetAllocation_Error(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	assetRepo.On("ReturnAllPortfolio", testUserID).Return(nil, errors.New("db error"))
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/portfolio/allocation", nil)
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assetRepo.AssertExpectations(t)
+}
+
+func TestPortfolioHandler_GetBenchmark_PeriodoInvalido(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/portfolio/benchmark?period=yearly", nil)
 
 	r.ServeHTTP(w, req)
 

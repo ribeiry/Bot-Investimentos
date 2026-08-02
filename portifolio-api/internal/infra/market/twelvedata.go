@@ -23,7 +23,8 @@ func NewTwelveDataProvider(apiKey string) *twelveDataProvider {
 }
 
 type twelveDataResponse map[string]struct {
-	Price string `json:"price"`
+	Close  string `json:"close"`
+	Sector string `json:"sector"`
 }
 
 func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote, error) {
@@ -50,7 +51,7 @@ func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote,
 			symbols = append(symbols, a.Ticker)
 		}
 
-		url := fmt.Sprintf("https://api.twelvedata.com/price?symbol=%s&apikey=%s",
+		url := fmt.Sprintf("https://api.twelvedata.com/quote?symbol=%s&apikey=%s",
 			strings.Join(symbols, ","), t.apiKey)
 
 		resp, err := t.client.Get(url)
@@ -63,11 +64,12 @@ func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote,
 		json.NewDecoder(resp.Body).Decode(&batchResp)
 
 		for ticker, data := range batchResp {
-			price, _ := strconv.ParseFloat(data.Price, 64)
+			price, _ := strconv.ParseFloat(data.Close, 64)
 			quotes = append(quotes, domain.Quote{
 				Ticker:       ticker,
 				CurrentValue: price,
 				QuotedAt:     time.Now(),
+				Sector:       data.Sector,
 			})
 		}
 

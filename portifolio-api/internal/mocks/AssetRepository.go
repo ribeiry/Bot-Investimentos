@@ -93,6 +93,16 @@ func (_m *AssetRepository) Upsert(userID int64, asset domain.Asset) error {
 	return r0
 }
 
+// UpdateSector provides a mock function with given fields: userID, ticker, sector
+func (_m *AssetRepository) UpdateSector(userID int64, ticker string, sector string) error {
+	ret := _m.Called(userID, ticker, sector)
+
+	if fn, ok := ret.Get(0).(func(int64, string, string) error); ok {
+		return fn(userID, ticker, sector)
+	}
+	return ret.Error(0)
+}
+
 // NewAssetRepository creates a new instance of AssetRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 func NewAssetRepository(t interface {
 	mock.TestingT

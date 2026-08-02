@@ -18,6 +18,7 @@ type brapiResponse struct {
 		Symbol                     string  `json:"symbol"`
 		RegularMarketPrice         float64 `json:"regularMarketPrice"`
 		RegularMarketPreviousClose float64 `json:"regularMarketPreviousClose"`
+		Sector                     string  `json:"sector"`
 	} `json:"results"`
 }
 
@@ -32,7 +33,7 @@ func (b brapiProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote, erro
 	var quotes []domain.Quote
 
 	for _, asset := range assets {
-		url := fmt.Sprintf("https://brapi.dev/api/quote/%s?token=%s", asset.Ticker, b.token)
+		url := fmt.Sprintf("https://brapi.dev/api/quote/%s?fundamental=true&token=%s", asset.Ticker, b.token)
 
 		resp, err := b.client.Get(url)
 		if err != nil {
@@ -53,6 +54,7 @@ func (b brapiProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote, erro
 			CurrentValue:  result.RegularMarketPrice,
 			PreviousValue: result.RegularMarketPreviousClose,
 			QuotedAt:      time.Now(),
+			Sector:        result.Sector,
 		})
 	}
 

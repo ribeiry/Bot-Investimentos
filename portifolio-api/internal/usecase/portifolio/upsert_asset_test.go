@@ -75,6 +75,20 @@ func TestUpsertAsset_MercadoInvalido(t *testing.T) {
 	assetRepo.AssertExpectations(t)
 }
 
+func TestUpsertAsset_ComSetor_Success(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	const userID int64 = 1
+
+	asset := domain.Asset{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50, Sector: "Financeiro"}
+	assetRepo.On("Upsert", userID, asset).Return(nil)
+
+	usecase := NewUpsertAssetUseCase(assetRepo)
+	err := usecase.Execute(userID, asset)
+
+	assert.NoError(t, err)
+	assetRepo.AssertExpectations(t)
+}
+
 func TestUpsertAsset_RepError(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
 	const userID int64 = 1
