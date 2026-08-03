@@ -88,10 +88,11 @@ Priorizadas por ICE Score — revisar a cada sprint.
 - Requer: chave da API Anthropic, middleware de chamada na rotina de relatório
 - Benefício: usuários recebem insight direto em vez de só números
 
-**2. Simulação "e se" (recálculo hipotético)**
-- Simular venda de ativo X e compra de ativo Y, refazer todo o cálculo de performance
-- Muito especulativo — com 0 validação externa
-- Prioridade baixa até feedback real de usuário
+**2. Simulação "e se" (recálculo hipotético)** ✅ Concluído
+- `POST /portfolio/simulate` com lista de operações hipotéticas (sell/buy)
+- Preço buscado do `price_history` primeiro; API só para tickers sem histórico
+- Retorna `current` + `simulated` + `delta` + `skipped` (com reason)
+- Operações inválidas (insufficient quantity, quote unavailable) são skipped com aviso
 
 ---
 
@@ -110,7 +111,8 @@ Priorizadas por ICE Score — revisar a cada sprint.
 
 **Fase 4 — após validação com usuários reais:**
 1. Resumo em LLM
-2. Simulação "e se"
+2. ~~Simulação "e se"~~ ✅ Concluído
+3. ~~Concorrência no market provider~~ ✅ Concluído (story 011)
 
 ---
 

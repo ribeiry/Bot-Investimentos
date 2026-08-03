@@ -17,6 +17,8 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 - **Resumo semanal/mensal** — variação da carteira na semana ou no mês via price_history
 - **Comparação com benchmark** — carteira vs IBOV e S&P500 por período
 - **Alocação por setor** — percentual do patrimônio em cada setor (setor informado manualmente no cadastro do ativo)
+- **Simulação "e se"** — simula operações hipotéticas (venda/compra) e compara carteira atual vs simulada com delta de retorno
+- **Concorrência no provider** — B3 e NYSE/NASDAQ buscados em goroutines paralelas
 
 ---
 
@@ -150,6 +152,8 @@ n8n:
 | `GET` | `/portfolio/period-summary?period=weekly\|monthly` | Variação da carteira no período |
 | `GET` | `/portfolio/benchmark?period=weekly\|monthly` | Carteira vs IBOV e S&P500 |
 | `GET` | `/portfolio/allocation` | Alocação por setor com percentual do patrimônio |
+| `PATCH` | `/portfolio/assets/:ticker/sector` | Atualiza ou limpa o setor de um ativo |
+| `POST` | `/portfolio/simulate` | Simula operações hipotéticas — retorna current, simulated e delta |
 
 #### Market
 
@@ -327,11 +331,11 @@ go test ./... -cover
 |---|---|
 | `usecase/alert` | 17 testes |
 | `usecase/market` | 8 testes |
-| `usecase/portifolio` | 33 testes |
+| `usecase/portifolio` | 44 testes |
 | `usecase/user` | 4 testes |
-| `adapter/http` | 34 testes |
+| `adapter/http` | 37 testes |
 | `adapter/http/middleware` | 4 testes |
-| **Total** | **122 testes** |
+| **Total** | **143 testes** |
 
 ---
 
@@ -341,7 +345,8 @@ go test ./... -cover
 |---|---|---|
 | Fase 1 — MVP | ✅ Concluída | API Go + n8n + Telegram + SQLite |
 | Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL 📋 · Cloud 📋 |
-| Fase 3 — Alertas | 🚧 Em andamento | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark ✅ · Alocação por setor ✅ |
-| Fase 4 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes |
+| Fase 3 — Alertas | ✅ Concluída | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark ✅ · Alocação por setor ✅ · Simulação e-se ✅ |
+| Fase 4 — Performance | ✅ Concluída | Concorrência B3+NYSE ✅ · PATCH setor ✅ |
+| Fase 5 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes · PostgreSQL |
 
 Detalhes e priorização: [BACKLOG.md](./BACKLOG.md)

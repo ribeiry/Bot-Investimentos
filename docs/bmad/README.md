@@ -65,5 +65,5 @@ docs/bmad/
 | 006 | Notificação de dividendos | Média |
 | 007 | Resumo LLM (Claude API) | Média |
 | 008 | Migração PostgreSQL | Alta |
-| 009 | Simulação "e se" | Baixa |
-| 011 | Concorrência no Market Provider | Média |
+| 009 | Simulação "e se" | ✅ Done |
+| 011 | Concorrência no Market Provider | ✅ Done |
