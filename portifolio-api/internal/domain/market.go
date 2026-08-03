@@ -8,5 +8,4 @@ type Quote struct {
 	QuotedAt      time.Time
 	PreviousValue float64
 	CurrentValue  float64
-	Sector        string
 }

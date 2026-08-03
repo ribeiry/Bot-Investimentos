@@ -20,14 +20,14 @@ func TestGetAllocation_ComSetor_Success(t *testing.T) {
 		{Ticker: "AAPL", Market: "NYSE", Quantity: 10, AveragePrice: 150.00, Sector: "Technology"},
 	}
 	quotes := []domain.Quote{
-		{Ticker: "BBSE3", CurrentValue: 40.00, Sector: "Financeiro"},
-		{Ticker: "ITSA4", CurrentValue: 12.00, Sector: "Financeiro"},
-		{Ticker: "AAPL", CurrentValue: 160.00, Sector: "Technology"},
+		{Ticker: "BBSE3", CurrentValue: 40.00},
+		{Ticker: "ITSA4", CurrentValue: 12.00},
+		{Ticker: "AAPL", CurrentValue: 160.00},
 	}
 
 	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)
 	marketProvider.On("GetByTickers", assets).Return(quotes, nil)
-	// setor já preenchido → UpdateSector não é chamado
+	// setor já preenchido → não chama UpdateSector
 
 	usecase := NewGetAllocationUseCase(assetRepo, marketProvider)
 	result, err := usecase.Execute(userID)
@@ -48,47 +48,20 @@ func TestGetAllocation_ComSetor_Success(t *testing.T) {
 		}
 	}
 	_ = total
-	assetRepo.AssertNotCalled(t, "UpdateSector")
 	assetRepo.AssertExpectations(t)
 	marketProvider.AssertExpectations(t)
 }
 
-func TestGetAllocation_SemSetor_BuscaEAtualiza(t *testing.T) {
+func TestGetAllocation_SemSetor_Outros(t *testing.T) {
 	assetRepo := new(mocks.AssetRepository)
 	marketProvider := new(mocks.MarketProvider)
 	const userID int64 = 1
 
 	assets := []domain.Asset{
-		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.00, Sector: ""},
+		{Ticker: "PETR4", Market: "B3", Quantity: 100, AveragePrice: 38.00, Sector: ""},
 	}
 	quotes := []domain.Quote{
-		{Ticker: "BBSE3", CurrentValue: 40.00, Sector: "Financeiro"},
-	}
-
-	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)
-	marketProvider.On("GetByTickers", assets).Return(quotes, nil)
-	assetRepo.On("UpdateSector", userID, "BBSE3", "Financeiro").Return(nil)
-
-	usecase := NewGetAllocationUseCase(assetRepo, marketProvider)
-	result, err := usecase.Execute(userID)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, "Financeiro", result[0].Sector)
-	assetRepo.AssertExpectations(t)
-	marketProvider.AssertExpectations(t)
-}
-
-func TestGetAllocation_SemSetor_APITambemSemSetor_Outros(t *testing.T) {
-	assetRepo := new(mocks.AssetRepository)
-	marketProvider := new(mocks.MarketProvider)
-	const userID int64 = 1
-
-	assets := []domain.Asset{
-		{Ticker: "XPTO3", Market: "B3", Quantity: 50, AveragePrice: 20.00, Sector: ""},
-	}
-	quotes := []domain.Quote{
-		{Ticker: "XPTO3", CurrentValue: 22.00, Sector: ""},
+		{Ticker: "PETR4", CurrentValue: 43.00},
 	}
 
 	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)
@@ -100,7 +73,6 @@ func TestGetAllocation_SemSetor_APITambemSemSetor_Outros(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
 	assert.Equal(t, "Outros", result[0].Sector)
-	assetRepo.AssertNotCalled(t, "UpdateSector")
 	assetRepo.AssertExpectations(t)
 }
 
@@ -167,9 +139,9 @@ func TestGetAllocation_PercentagemCorreta(t *testing.T) {
 		{Ticker: "C", Market: "B3", Quantity: 100, AveragePrice: 10.00, Sector: "Financeiro"},
 	}
 	quotes := []domain.Quote{
-		{Ticker: "A", CurrentValue: 10.00, Sector: "Tech"},
-		{Ticker: "B", CurrentValue: 10.00, Sector: "Financeiro"},
-		{Ticker: "C", CurrentValue: 10.00, Sector: "Financeiro"},
+		{Ticker: "A", CurrentValue: 10.00},
+		{Ticker: "B", CurrentValue: 10.00},
+		{Ticker: "C", CurrentValue: 10.00},
 	}
 
 	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)

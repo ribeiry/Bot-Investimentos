@@ -5,7 +5,17 @@ import (
 	"sort"
 )
 
-func buildMarketSummaries(assets []domain.Asset, priceOf func(ticker string) float64) []domain.MarketSummary {
+func groupKey(groupBy string, asset domain.Asset) string {
+	if groupBy == "sector" {
+		if asset.Sector == "" {
+			return "Outros"
+		}
+		return asset.Sector
+	}
+	return asset.Market
+}
+
+func buildMarketSummaries(assets []domain.Asset, priceOf func(ticker string) float64, groupBy string) []domain.MarketSummary {
 	marketMap := make(map[string][]domain.AssetSummary)
 	for _, asset := range assets {
 		totalDay := priceOf(asset.Ticker) * float64(asset.Quantity)
@@ -13,7 +23,8 @@ func buildMarketSummaries(assets []domain.Asset, priceOf func(ticker string) flo
 			Ticker:   asset.Ticker,
 			TotalDay: totalDay,
 		}
-		marketMap[asset.Market] = append(marketMap[asset.Market], assetSummary)
+		key := groupKey(groupBy, asset)
+		marketMap[key] = append(marketMap[key], assetSummary)
 	}
 
 	marketSummaries := make([]domain.MarketSummary, 0, len(marketMap))

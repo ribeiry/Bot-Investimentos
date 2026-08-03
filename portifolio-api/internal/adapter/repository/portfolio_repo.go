@@ -62,3 +62,4 @@ func (r portfolioRepository) UpdateSector(userID int64, ticker string, sector st
 	)
 	return err
 }
+

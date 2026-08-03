@@ -30,15 +30,6 @@ func (g GetAllocationUseCase) Execute(userID int64) ([]domain.SectorAllocation, 
 		quoteMap[q.Ticker] = q
 	}
 
-	for i, a := range assets {
-		if a.Sector == "" {
-			if q, ok := quoteMap[a.Ticker]; ok && q.Sector != "" {
-				g.assetRepo.UpdateSector(userID, a.Ticker, q.Sector)
-				assets[i].Sector = q.Sector
-			}
-		}
-	}
-
 	sectorMap := make(map[string]*domain.SectorAllocation)
 	var totalValue float64
 

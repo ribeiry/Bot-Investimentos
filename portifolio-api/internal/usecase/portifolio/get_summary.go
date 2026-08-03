@@ -19,7 +19,7 @@ func NewGetSummaryUseCase(assetRepo domain.AssetRepository, marketProvider domai
 	}
 }
 
-func (g GetSummaryUseCase) Execute(userID int64, mode string) (*domain.PortfolioSummary, error) {
+func (g GetSummaryUseCase) Execute(userID int64, mode string, groupBy string) (*domain.PortfolioSummary, error) {
 	assets, err := g.assetRepo.ReturnAllPortfolio(userID)
 	if err != nil {
 		return nil, err
@@ -40,9 +40,12 @@ func (g GetSummaryUseCase) Execute(userID int64, mode string) (*domain.Portfolio
 		quoteMap[quote.Ticker] = quote
 	}
 
+	if groupBy == "" {
+		groupBy = "market"
+	}
 	summaries := buildMarketSummaries(assets, func(ticker string) float64 {
 		return quoteMap[ticker].CurrentValue
-	})
+	}, groupBy)
 
 	return &domain.PortfolioSummary{
 		MarketSummary: summaries,

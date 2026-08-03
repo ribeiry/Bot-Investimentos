@@ -21,7 +21,7 @@ func TestBuildMarketSummaries_B3(t *testing.T) {
 		return prices[ticker]
 	}
 
-	result := buildMarketSummaries(assets, priceOf)
+	result := buildMarketSummaries(assets, priceOf, "market")
 
 	assert.Len(t, result, 1)
 	assert.Equal(t, "B3", result[0].MarketProvider)
@@ -45,7 +45,7 @@ func TestBuildMarketSummaries_MultiMarket(t *testing.T) {
 		return prices[ticker]
 	}
 
-	result := buildMarketSummaries(assets, priceOf)
+	result := buildMarketSummaries(assets, priceOf, "market")
 
 	assert.Len(t, result, 2)
 }
@@ -64,7 +64,7 @@ func TestBuildMarketSummaries_DoisAtivos(t *testing.T) {
 		return prices[ticker]
 	}
 
-	result := buildMarketSummaries(assets, priceOf)
+	result := buildMarketSummaries(assets, priceOf, "market")
 
 	assert.Len(t, result, 1)
 	assert.InDelta(t, 6300.00, result[0].TotalperMarket, 0.01)
@@ -84,7 +84,7 @@ func TestBuildMarketSummaries_TopNLimitado(t *testing.T) {
 
 	priceOf := func(ticker string) float64 { return 10.0 }
 
-	result := buildMarketSummaries(assets, priceOf)
+	result := buildMarketSummaries(assets, priceOf, "market")
 
 	assert.Len(t, result[0].TopGainers, 3)
 }
@@ -102,7 +102,7 @@ func TestBuildMarketSummaries_ComPerdas(t *testing.T) {
 		return prices[ticker]
 	}
 
-	result := buildMarketSummaries(assets, priceOf)
+	result := buildMarketSummaries(assets, priceOf, "market")
 
 	assert.Len(t, result, 1)
 	assert.Len(t, result[0].TopLosers, 1)
@@ -110,6 +110,42 @@ func TestBuildMarketSummaries_ComPerdas(t *testing.T) {
 	assert.Len(t, result[0].TopGainers, 1)
 	assert.Equal(t, "ITSA4", result[0].TopGainers[0].Ticker)
 }
+func TestBuildMarketSummaries_GroupBySector(t *testing.T) {
+	assets := []domain.Asset{
+		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50, Sector: "Financeiro"},
+		{Ticker: "ITSA4", Market: "B3", Quantity: 200, AveragePrice: 10.00, Sector: "Financeiro"},
+		{Ticker: "AAPL", Market: "NYSE", Quantity: 10, AveragePrice: 150.00, Sector: "Technology"},
+	}
+
+	priceOf := func(ticker string) float64 {
+		prices := map[string]float64{"BBSE3": 40.00, "ITSA4": 12.00, "AAPL": 160.00}
+		return prices[ticker]
+	}
+
+	result := buildMarketSummaries(assets, priceOf, "sector")
+
+	assert.Len(t, result, 2)
+	groups := map[string]bool{}
+	for _, s := range result {
+		groups[s.MarketProvider] = true
+	}
+	assert.True(t, groups["Financeiro"])
+	assert.True(t, groups["Technology"])
+}
+
+func TestBuildMarketSummaries_GroupBySector_SemSetor_Outros(t *testing.T) {
+	assets := []domain.Asset{
+		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50, Sector: ""},
+	}
+
+	priceOf := func(ticker string) float64 { return 40.00 }
+
+	result := buildMarketSummaries(assets, priceOf, "sector")
+
+	assert.Len(t, result, 1)
+	assert.Equal(t, "Outros", result[0].MarketProvider)
+}
+
 func TestBuildMarketSummaries_MultiplasPercas(t *testing.T) {
 	assets := []domain.Asset{
 		{Ticker: "A1", Market: "B3", Quantity: 100, AveragePrice: 40.00},
@@ -126,7 +162,7 @@ func TestBuildMarketSummaries_MultiplasPercas(t *testing.T) {
 		return prices[ticker]
 	}
 
-	result := buildMarketSummaries(assets, priceOf)
+	result := buildMarketSummaries(assets, priceOf, "market")
 
 	assert.Len(t, result[0].TopLosers, 3)
 }

@@ -11,10 +11,12 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 - Cache de preços via SQLite para consultas instantâneas
 - Relatório diário automático às 18:30 (seg-sex)
 - 4 comandos via Telegram: `/status`, `/ativos`, `/resumo`, `/performance`
-- Cálculo de performance por ativo (valor investido, valor atual, lucro/prejuízo, retorno %)
-- Consolidação da carteira por mercado com Top Gainers e Top Losers
+- Cálculo de performance por ativo (valor investido, valor atual, lucro/prejuízo, retorno % e **setor**)
+- Consolidação da carteira por mercado ou por setor com Top Gainers e Top Losers
 - **Alertas de preço** — stop gain e stop loss por ativo, verificação sob demanda
 - **Resumo semanal/mensal** — variação da carteira na semana ou no mês via price_history
+- **Comparação com benchmark** — carteira vs IBOV e S&P500 por período
+- **Alocação por setor** — percentual do patrimônio em cada setor (setor informado manualmente no cadastro do ativo)
 
 ---
 
@@ -27,7 +29,7 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 | Harness | n8n |
 | Mensageria | Telegram Bot API |
 | Mercado B3 | Brapi.dev |
-| Mercado NYSE/NASDAQ | Twelve Data |
+| Mercado NYSE/NASDAQ | Twelve Data (`/quote`) |
 | Cache | price_history (SQLite) |
 | Orquestração | Docker Compose |
 
@@ -63,7 +65,7 @@ portifolio-api/
     ├── infra/            ← SQLite, Brapi, Twelve Data
     │   ├── db/
     │   └── market/
-    └── mocks/            ← mocks gerados para testes
+    └── mocks/            ← mocks para testes
 ```
 
 ---
@@ -139,21 +141,22 @@ n8n:
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `GET` | `/portfolio/assets` | Lista ativos do usuário |
-| `POST` | `/portfolio/assets` | Cadastra ou atualiza ativo |
+| `GET` | `/portfolio/assets` | Lista ativos (inclui `sector`) |
+| `POST` | `/portfolio/assets` | Cadastra ou atualiza ativo (`sector` opcional — informado manualmente) |
 | `DELETE` | `/portfolio/assets/:ticker` | Remove ativo |
-| `GET` | `/portfolio/summary?mode=cached` | Resumo consolidado (cache) |
-| `GET` | `/portfolio/summary?mode=realtime` | Resumo consolidado (tempo real) |
-| `GET` | `/portfolio/performance` | Performance detalhada por ativo |
-| `GET` | `/portfolio/period-summary?period=weekly` | Variação da carteira na semana |
-| `GET` | `/portfolio/period-summary?period=monthly` | Variação da carteira no mês |
+| `GET` | `/portfolio/summary?mode=cached\|realtime` | Resumo consolidado por mercado |
+| `GET` | `/portfolio/summary?mode=realtime&group_by=sector` | Resumo consolidado por setor |
+| `GET` | `/portfolio/performance` | Performance por ativo (inclui `sector`) |
+| `GET` | `/portfolio/period-summary?period=weekly\|monthly` | Variação da carteira no período |
+| `GET` | `/portfolio/benchmark?period=weekly\|monthly` | Carteira vs IBOV e S&P500 |
+| `GET` | `/portfolio/allocation` | Alocação por setor com percentual do patrimônio |
 
 #### Market
 
 | Método | Rota | Descrição |
 |---|---|---|
 | `GET` | `/market/prices` | Preços atuais de todos os ativos |
-| `GET` | `/market/close?market=B3` | Fechamento por mercado (B3, NYSE, NASDAQ) |
+| `GET` | `/market/close?market=B3\|NYSE\|NASDAQ` | Fechamento por mercado |
 
 #### Alertas
 
@@ -181,11 +184,7 @@ curl -s -X POST http://localhost:8080/users \
 ```
 
 ```json
-{
-  "id": 1,
-  "api_key": "a3f8c2d1...",
-  "name": "João"
-}
+{ "id": 1, "api_key": "a3f8c2d1...", "name": "João" }
 ```
 
 ### 2. Usar a API key
@@ -199,20 +198,73 @@ curl http://localhost:8080/portfolio/assets \
 
 ## 📋 Exemplos de uso
 
-### Cadastrar ativo
+### Cadastrar ativo com setor
 
 ```bash
 curl -X POST http://localhost:8080/portfolio/assets \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <sua-key>" \
-  -d '{"ticker":"BBSE3","market":"B3","quantity":100,"average_price":38.50}'
+  -d '{"ticker":"BBSE3","market":"B3","quantity":100,"average_price":38.50,"sector":"Financeiro"}'
 ```
 
-### Resumo semanal
+> `sector` é opcional. Se não informado, o ativo aparece em `"Outros"` no `/allocation`. Nenhuma API retorna setor automaticamente — deve ser informado pelo usuário.
+
+### Performance por ativo (com setor)
 
 ```bash
-curl "http://localhost:8080/portfolio/period-summary?period=weekly" \
-  -H "X-API-Key: <sua-key>"
+curl http://localhost:8080/portfolio/performance \
+  -H "X-API-Key: <sua-key>" | jq
+```
+
+```json
+{
+  "telegram_id": "123456",
+  "data": [
+    {
+      "ticker": "BBSE3",
+      "market": "B3",
+      "sector": "Financeiro",
+      "quantity": 100,
+      "average_price": 38.50,
+      "current_price": 40.00,
+      "invested_value": 3850.00,
+      "current_value": 4000.00,
+      "profit_loss": 150.00,
+      "return_percentage": 3.89
+    }
+  ]
+}
+```
+
+### Alocação por setor
+
+```bash
+curl http://localhost:8080/portfolio/allocation \
+  -H "X-API-Key: <sua-key>" | jq
+```
+
+```json
+{
+  "telegram_id": "123456",
+  "data": [
+    { "sector": "Financeiro", "total_value": 6400.00, "percentage": 80.0, "tickers": ["BBSE3", "ITSA4"] },
+    { "sector": "Technology", "total_value": 1600.00, "percentage": 20.0, "tickers": ["AAPL"] }
+  ]
+}
+```
+
+### Resumo por setor
+
+```bash
+curl "http://localhost:8080/portfolio/summary?mode=realtime&group_by=sector" \
+  -H "X-API-Key: <sua-key>" | jq
+```
+
+### Comparação com benchmark
+
+```bash
+curl "http://localhost:8080/portfolio/benchmark?period=weekly" \
+  -H "X-API-Key: <sua-key>" | jq
 ```
 
 ```json
@@ -220,18 +272,11 @@ curl "http://localhost:8080/portfolio/period-summary?period=weekly" \
   "telegram_id": "123456",
   "data": {
     "period": "weekly",
-    "period_start": "2026-07-21T00:00:00Z",
-    "assets": [
-      {
-        "ticker": "BBSE3",
-        "price_start": 40.00,
-        "price_current": 42.00,
-        "change_value": 200.00,
-        "change_percent": 5.0
-      }
-    ],
-    "total_change_value": 200.00,
-    "total_change_percent": 5.0
+    "portfolio_return_percent": 5.0,
+    "benchmarks": [
+      { "name": "IBOV",   "return_percent": 4.0,  "relative_performance": 1.0 },
+      { "name": "S&P500", "return_percent": 10.0, "relative_performance": -5.0 }
+    ]
   }
 }
 ```
@@ -274,10 +319,6 @@ go test ./... -v
 
 # Com coverage
 go test ./... -cover
-
-# Coverage detalhado por pacote
-go test ./internal/usecase/... -coverprofile=coverage.out
-go tool cover -html=coverage.out
 ```
 
 ### Coverage atual
@@ -286,11 +327,11 @@ go tool cover -html=coverage.out
 |---|---|
 | `usecase/alert` | 17 testes |
 | `usecase/market` | 8 testes |
-| `usecase/portifolio` | 26 testes |
+| `usecase/portifolio` | 33 testes |
 | `usecase/user` | 4 testes |
-| `adapter/http` | 32 testes |
+| `adapter/http` | 34 testes |
 | `adapter/http/middleware` | 4 testes |
-| **Total** | **91 testes** |
+| **Total** | **122 testes** |
 
 ---
 
@@ -300,7 +341,7 @@ go tool cover -html=coverage.out
 |---|---|---|
 | Fase 1 — MVP | ✅ Concluída | API Go + n8n + Telegram + SQLite |
 | Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL 📋 · Cloud 📋 |
-| Fase 3 — Alertas | 🚧 Em andamento | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark 📋 |
+| Fase 3 — Alertas | 🚧 Em andamento | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark ✅ · Alocação por setor ✅ |
 | Fase 4 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes |
 
 Detalhes e priorização: [BACKLOG.md](./BACKLOG.md)

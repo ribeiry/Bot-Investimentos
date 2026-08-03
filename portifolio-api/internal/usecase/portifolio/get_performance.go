@@ -37,6 +37,7 @@ func (g GetPerformanceUseCase) Execute(userID int64) ([]domain.AssetPerformance,
 		performances = append(performances, domain.AssetPerformance{
 			Ticker:           asset.Ticker,
 			Market:           asset.Market,
+			Sector:           asset.Sector,
 			Quantity:         asset.Quantity,
 			AveragePrice:     asset.AveragePrice,
 			CurrentPrice:     quoteMap[asset.Ticker].CurrentValue,

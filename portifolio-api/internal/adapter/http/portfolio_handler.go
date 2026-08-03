@@ -17,6 +17,7 @@ type PortfolioHandler struct {
 	getPeriodSummary portifolio.GetPeriodSummaryUseCase
 	getBenchmark     portifolio.GetBenchmarkUseCase
 	getAllocation    portifolio.GetAllocationUseCase
+	updateSector     portifolio.UpdateSectorUseCase
 }
 
 func NewPortfolioHandler(
@@ -28,6 +29,7 @@ func NewPortfolioHandler(
 	getPeriodSummary portifolio.GetPeriodSummaryUseCase,
 	getBenchmark portifolio.GetBenchmarkUseCase,
 	getAllocation portifolio.GetAllocationUseCase,
+	updateSector portifolio.UpdateSectorUseCase,
 ) *PortfolioHandler {
 	return &PortfolioHandler{
 		upsert:           upsert,
@@ -38,6 +40,7 @@ func NewPortfolioHandler(
 		getPeriodSummary: getPeriodSummary,
 		getBenchmark:     getBenchmark,
 		getAllocation:    getAllocation,
+		updateSector:     updateSector,
 	}
 }
 
@@ -54,7 +57,8 @@ func (h PortfolioHandler) GetAssets(c *gin.Context) {
 func (h PortfolioHandler) GetSummaryAsset(c *gin.Context) {
 	userID := c.GetInt64("userID")
 	mode := c.Query("mode")
-	summary, err := h.getSummary.Execute(userID, mode)
+	groupBy := c.DefaultQuery("group_by", "market")
+	summary, err := h.getSummary.Execute(userID, mode, groupBy)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, err)
 		return
@@ -94,6 +98,21 @@ func (h PortfolioHandler) GetPerformance(c *gin.Context) {
 		return
 	}
 	respond(c, http.StatusOK, performance)
+}
+
+func (h PortfolioHandler) UpdateSector(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	ticker := c.Param("ticker")
+	var input portifolio.UpdateSectorInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	if err := h.updateSector.Execute(userID, ticker, input); err != nil {
+		respondError(c, http.StatusInternalServerError, err)
+		return
+	}
+	respondMessage(c, http.StatusOK, "setor atualizado com sucesso")
 }
 
 func (h PortfolioHandler) GetAllocation(c *gin.Context) {

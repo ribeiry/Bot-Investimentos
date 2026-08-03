@@ -14,7 +14,7 @@ func TestGetPerformance_Success(t *testing.T) {
 	marketProvider := new(mocks.MarketProvider)
 	const userID int64 = 1
 
-	assets := []domain.Asset{{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50}}
+	assets := []domain.Asset{{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.50, Sector: "Financeiro"}}
 	quotes := []domain.Quote{{Ticker: "BBSE3", CurrentValue: 40.00}}
 
 	assetRepo.On("ReturnAllPortfolio", userID).Return(assets, nil)
@@ -26,6 +26,7 @@ func TestGetPerformance_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
 	assert.Equal(t, "BBSE3", result[0].Ticker)
+	assert.Equal(t, "Financeiro", result[0].Sector)
 	assert.Equal(t, 40.00, result[0].CurrentPrice)
 	assert.Equal(t, 3850.00, result[0].InvestedValue)
 	assert.Equal(t, 4000.00, result[0].CurrentValue)

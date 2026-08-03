@@ -24,6 +24,7 @@ func setupPortfolioRouter(h *PortfolioHandler) *gin.Engine {
 	r.GET("/portfolio/assets", h.GetAssets)
 	r.POST("/portfolio/assets", h.UpsertAsset)
 	r.DELETE("/portfolio/assets/:ticker", h.DeleteAsset)
+	r.PATCH("/portfolio/assets/:ticker/sector", h.UpdateSector)
 	r.GET("/portfolio/summary", h.GetSummaryAsset)
 	r.GET("/portfolio/performance", h.GetPerformance)
 	r.GET("/portfolio/period-summary", h.GetPeriodSummary)
@@ -41,7 +42,8 @@ func buildPortfolioHandler(assetRepo *mocks.AssetRepository, marketProvider *moc
 	getPeriodSummary := portifolio.NewGetPeriodSummaryUseCase(assetRepo, marketProvider, priceHistory)
 	getBenchmark := portifolio.NewGetBenchmarkUseCase(assetRepo, marketProvider, priceHistory)
 	getAllocation := portifolio.NewGetAllocationUseCase(assetRepo, marketProvider)
-	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation)
+	updateSector := portifolio.NewUpdateSectorUseCase(assetRepo)
+	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation, updateSector)
 }
 
 // ─── GetAssets ───────────────────────────────────────────────────────────────
@@ -322,6 +324,67 @@ func TestPortfolioHandler_GetBenchmark_Success(t *testing.T) {
 	assetRepo.AssertExpectations(t)
 }
 
+// ─── UpdateSector ───────────────────────────────────────────────────────────
+
+func TestPortfolioHandler_UpdateSector_Success(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	assetRepo.On("UpdateSector", testUserID, "PETR4", "Energia").Return(nil)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/portfolio/assets/PETR4/sector",
+		bytes.NewBufferString(`{"sector":"Energia"}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assert.Contains(t, w.Body.String(), "message")
+	assetRepo.AssertExpectations(t)
+}
+
+func TestPortfolioHandler_UpdateSector_Limpar(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	assetRepo.On("UpdateSector", testUserID, "PETR4", "").Return(nil)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/portfolio/assets/PETR4/sector",
+		bytes.NewBufferString(`{"sector":""}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assetRepo.AssertExpectations(t)
+}
+
+func TestPortfolioHandler_UpdateSector_BadJSON(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/portfolio/assets/PETR4/sector",
+		bytes.NewBufferString(`invalid`))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assetRepo.AssertNotCalled(t, "UpdateSector")
+}
+
 // ─── GetAllocation ───────────────────────────────────────────────────────────
 
 func TestPortfolioHandler_GetAllocation_Success(t *testing.T) {
@@ -333,7 +396,7 @@ func TestPortfolioHandler_GetAllocation_Success(t *testing.T) {
 		{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.00, Sector: "Financeiro"},
 	}
 	quotes := []domain.Quote{
-		{Ticker: "BBSE3", CurrentValue: 40.00, Sector: "Financeiro"},
+		{Ticker: "BBSE3", CurrentValue: 40.00},
 	}
 
 	assetRepo.On("ReturnAllPortfolio", testUserID).Return(assets, nil)

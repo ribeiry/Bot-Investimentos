@@ -23,8 +23,7 @@ func NewTwelveDataProvider(apiKey string) *twelveDataProvider {
 }
 
 type twelveDataResponse map[string]struct {
-	Close  string `json:"close"`
-	Sector string `json:"sector"`
+	Close string `json:"close"`
 }
 
 func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote, error) {
@@ -69,7 +68,6 @@ func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote,
 				Ticker:       ticker,
 				CurrentValue: price,
 				QuotedAt:     time.Now(),
-				Sector:       data.Sector,
 			})
 		}
 
