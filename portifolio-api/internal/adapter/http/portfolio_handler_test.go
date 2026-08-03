@@ -30,6 +30,7 @@ func setupPortfolioRouter(h *PortfolioHandler) *gin.Engine {
 	r.GET("/portfolio/period-summary", h.GetPeriodSummary)
 	r.GET("/portfolio/benchmark", h.GetBenchmark)
 	r.GET("/portfolio/allocation", h.GetAllocation)
+	r.POST("/portfolio/simulate", h.Simulate)
 	return r
 }
 
@@ -43,7 +44,8 @@ func buildPortfolioHandler(assetRepo *mocks.AssetRepository, marketProvider *moc
 	getBenchmark := portifolio.NewGetBenchmarkUseCase(assetRepo, marketProvider, priceHistory)
 	getAllocation := portifolio.NewGetAllocationUseCase(assetRepo, marketProvider)
 	updateSector := portifolio.NewUpdateSectorUseCase(assetRepo)
-	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation, updateSector)
+	simulate := portifolio.NewSimulateUseCase(assetRepo, marketProvider, priceHistory)
+	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation, updateSector, simulate)
 }
 
 // ─── GetAssets ───────────────────────────────────────────────────────────────
@@ -283,6 +285,67 @@ func TestPortfolioHandler_GetPeriodSummary_PeriodoInvalido(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), testTelegramID)
 	assetRepo.AssertNotCalled(t, "ReturnAllPortfolio")
+}
+
+// ─── Simulate ────────────────────────────────────────────────────────────
+
+func TestPortfolioHandler_Simulate_Success(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	assets := []domain.Asset{{Ticker: "BBSE3", Market: "B3", Quantity: 100, AveragePrice: 38.00}}
+	assetRepo.On("ReturnAllPortfolio", testUserID).Return(assets, nil)
+	priceHistory.On("GetLastPrice", "BBSE3").Return(40.00, nil)
+
+	body := `{"operations":[{"action":"sell","ticker":"BBSE3","quantity":50}]}`
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/portfolio/simulate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assert.Contains(t, w.Body.String(), "current")
+	assert.Contains(t, w.Body.String(), "simulated")
+	assert.Contains(t, w.Body.String(), "delta")
+	assetRepo.AssertExpectations(t)
+}
+
+func TestPortfolioHandler_Simulate_OperacoesVazias(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	body := `{"operations":[]}`
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/portfolio/simulate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
+	assetRepo.AssertNotCalled(t, "ReturnAllPortfolio")
+}
+
+func TestPortfolioHandler_Simulate_BadJSON(t *testing.T) {
+	assetRepo := new(mocks.AssetRepository)
+	marketProvider := new(mocks.MarketProvider)
+	priceHistory := new(mocks.PriceHistoryRepository)
+
+	r := setupPortfolioRouter(buildPortfolioHandler(assetRepo, marketProvider, priceHistory))
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/portfolio/simulate", bytes.NewBufferString(`invalid`))
+	req.Header.Set("Content-Type", "application/json")
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), testTelegramID)
 }
 
 // ─── GetBenchmark ────────────────────────────────────────────────────────────

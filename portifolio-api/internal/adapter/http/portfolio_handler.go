@@ -18,6 +18,7 @@ type PortfolioHandler struct {
 	getBenchmark     portifolio.GetBenchmarkUseCase
 	getAllocation    portifolio.GetAllocationUseCase
 	updateSector     portifolio.UpdateSectorUseCase
+	simulate         portifolio.SimulateUseCase
 }
 
 func NewPortfolioHandler(
@@ -30,6 +31,7 @@ func NewPortfolioHandler(
 	getBenchmark portifolio.GetBenchmarkUseCase,
 	getAllocation portifolio.GetAllocationUseCase,
 	updateSector portifolio.UpdateSectorUseCase,
+	simulate portifolio.SimulateUseCase,
 ) *PortfolioHandler {
 	return &PortfolioHandler{
 		upsert:           upsert,
@@ -41,6 +43,7 @@ func NewPortfolioHandler(
 		getBenchmark:     getBenchmark,
 		getAllocation:    getAllocation,
 		updateSector:     updateSector,
+		simulate:         simulate,
 	}
 }
 
@@ -113,6 +116,21 @@ func (h PortfolioHandler) UpdateSector(c *gin.Context) {
 		return
 	}
 	respondMessage(c, http.StatusOK, "setor atualizado com sucesso")
+}
+
+func (h PortfolioHandler) Simulate(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	var input portifolio.SimulateInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	result, err := h.simulate.Execute(userID, input)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	respond(c, http.StatusOK, result)
 }
 
 func (h PortfolioHandler) GetAllocation(c *gin.Context) {

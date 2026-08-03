@@ -66,3 +66,4 @@ docs/bmad/
 | 007 | Resumo LLM (Claude API) | Média |
 | 008 | Migração PostgreSQL | Alta |
 | 009 | Simulação "e se" | Baixa |
+| 011 | Concorrência no Market Provider | Média |

@@ -22,8 +22,13 @@ func NewTwelveDataProvider(apiKey string) *twelveDataProvider {
 	}
 }
 
-type twelveDataResponse map[string]struct {
+type twelveDataMultiResponse map[string]struct {
 	Close string `json:"close"`
+}
+
+type twelveDataSingleResponse struct {
+	Symbol string `json:"symbol"`
+	Close  string `json:"close"`
 }
 
 func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote, error) {
@@ -59,16 +64,28 @@ func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote,
 		}
 		defer resp.Body.Close()
 
-		var batchResp twelveDataResponse
-		json.NewDecoder(resp.Body).Decode(&batchResp)
-
-		for ticker, data := range batchResp {
-			price, _ := strconv.ParseFloat(data.Close, 64)
-			quotes = append(quotes, domain.Quote{
-				Ticker:       ticker,
-				CurrentValue: price,
-				QuotedAt:     time.Now(),
-			})
+		if len(batch) == 1 {
+			var single twelveDataSingleResponse
+			json.NewDecoder(resp.Body).Decode(&single)
+			if single.Symbol != "" && single.Close != "" {
+				price, _ := strconv.ParseFloat(single.Close, 64)
+				quotes = append(quotes, domain.Quote{
+					Ticker:       single.Symbol,
+					CurrentValue: price,
+					QuotedAt:     time.Now(),
+				})
+			}
+		} else {
+			var batchResp twelveDataMultiResponse
+			json.NewDecoder(resp.Body).Decode(&batchResp)
+			for ticker, data := range batchResp {
+				price, _ := strconv.ParseFloat(data.Close, 64)
+				quotes = append(quotes, domain.Quote{
+					Ticker:       ticker,
+					CurrentValue: price,
+					QuotedAt:     time.Now(),
+				})
+			}
 		}
 
 		// delay entre lotes para respeitar rate limit
