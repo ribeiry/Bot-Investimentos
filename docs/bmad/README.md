@@ -62,7 +62,7 @@ docs/bmad/
 | ID | Story | Prioridade |
 |----|-------|------------|
 | 005 | Alocação por setor | Alta |
-| 006 | Notificação de dividendos | Média |
+| 006 | Notificação de dividendos | ❌ Cancelado — Brapi e Twelve Data exigem plano pago |
 | 007 | Resumo LLM (Claude API) | Média |
 | 008 | Migração PostgreSQL | Alta |
 | 009 | Simulação "e se" | ✅ Done |
