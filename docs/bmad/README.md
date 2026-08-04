@@ -67,4 +67,4 @@ docs/bmad/
 | 008 | Migração PostgreSQL | Alta |
 | 009 | Simulação "e se" | ✅ Done |
 | 011 | Concorrência no Market Provider | ✅ Done |
-| 012 | Brapi Batch Request | Média |
+| 012 | Brapi Batch Request | ❌ Cancelado — plano free limita 1 ativo/request |
