@@ -55,7 +55,8 @@ docs/bmad/
     └── backlog/           ← aguardando aprovação/implementação
         ├── 007-resumo-llm.md
         ├── 013-get-user-me.md
-        └── 014-telegram-id-unico.md
+        ├── 014-telegram-id-unico.md
+        └── 015-menu-interativo-telegram.md
 ```
 
 ## Stories do backlog
@@ -76,3 +77,4 @@ docs/bmad/
 | 012 | Brapi Batch Request | ❌ Cancelado — plano free limita 1 ativo/request |
 | 013 | GET /users/me | 📋 Backlog — Baixa |
 | 014 | Validação telegram_id único | 📋 Backlog — Média |
+| 015 | Menu interativo no Telegram (n8n) | 📋 Backlog — Média |
