@@ -23,7 +23,7 @@ Detalhamento das fases de desenvolvimento com priorização por ICE Score (Impac
 | Feature | Status | Descrição |
 |---|---|---|
 | Suporte multiusuário | ✅ Concluído | Carteira isolada por usuário via API key; `POST /users` para registro; auth middleware com lookup no DB |
-| PostgreSQL | 📋 Backlog | Migração de SQLite para Postgres |
+| PostgreSQL | ✅ Concluído | Migração SQLite → PostgreSQL via `pgx/v5`; docker-compose com healthcheck |
 | Cloud deployment | 📋 Backlog | Rodar em produção (AWS/GCP/Heroku) |
 
 ---
@@ -99,8 +99,8 @@ Priorizadas por ICE Score — revisar a cada sprint.
 ## Priorização Consolidada
 
 **Próximo (Fase 2):**
-1. PostgreSQL — pré-requisito para produção real
-2. Cloud deployment — após migração de banco
+1. ~~PostgreSQL~~ ✅ Concluído
+2. Cloud deployment — próximo pré-requisito para produção
 
 **Fase 3 — próximo:**
 1. ✅ Alertas de preço — concluído

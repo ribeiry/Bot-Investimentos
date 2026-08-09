@@ -27,12 +27,12 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 | Componente | Tecnologia |
 |---|---|
 | API | Go 1.23 + Gin |
-| Banco | SQLite (local) → PostgreSQL (produção) |
+| Banco | PostgreSQL 16 (via `jackc/pgx/v5`) |
 | Harness | n8n |
 | Mensageria | Telegram Bot API |
 | Mercado B3 | Brapi.dev |
 | Mercado NYSE/NASDAQ | Twelve Data (`/quote`) |
-| Cache | price_history (SQLite) |
+| Cache | price_history (Postgres) |
 | Orquestração | Docker Compose |
 
 ---
@@ -40,7 +40,7 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 ## 🏗 Arquitetura
 
 ```
-Telegram → n8n (Harness) → API Go → SQLite
+Telegram → n8n (Harness) → API Go → PostgreSQL
                                ↓
                          Brapi (B3)
                          Twelve Data (NYSE/NASDAQ)
@@ -64,7 +64,7 @@ portifolio-api/
     │   ├── http/
     │   │   └── middleware/
     │   └── repository/
-    ├── infra/            ← SQLite, Brapi, Twelve Data
+    ├── infra/            ← PostgreSQL, Brapi, Twelve Data
     │   ├── db/
     │   └── market/
     └── mocks/            ← mocks para testes
@@ -77,7 +77,7 @@ portifolio-api/
 ### 1. Pré-requisitos
 
 - Go 1.23+
-- Docker e Docker Compose
+- Docker e Docker Compose (obrigatório para o PostgreSQL)
 - Conta no [Brapi](https://brapi.dev) — cotações B3
 - Conta no [Twelve Data](https://twelvedata.com) — cotações NYSE/NASDAQ
 - Bot Telegram criado via [@BotFather](https://t.me/BotFather)
@@ -91,18 +91,28 @@ Crie um arquivo `.env` na raiz de `portifolio-api/`:
 BRAPI_TOKEN=seu-token-brapi
 TWELVE_DATA_KEY=seu-token-twelve-data
 TELEGRAM_CHAT_ID=seu-chat-id
+DATABASE_URL=postgres://portfolio:portfolio@localhost:5432/portfolio?sslmode=disable
 ```
 
 > **Nota:** não há `API_KEY` global — cada usuário tem sua própria chave gerada via `POST /users`.
+> A variável `DATABASE_URL` é **obrigatória** — a API falha ao iniciar se não estiver definida.
 
 ### 3. Rodar localmente
 
+Suba o PostgreSQL via Docker:
+
 ```bash
 cd portifolio-api
+docker-compose up -d postgres
+```
+
+Rode a API:
+
+```bash
 go run ./cmd/api
 ```
 
-O banco SQLite é criado automaticamente em `./data/portfolio.db`. As migrations rodam na inicialização.
+As migrations rodam automaticamente na inicialização e criam as tabelas `users`, `portfolio`, `price_history` e `alerts`.
 
 ### 4. Subir via Docker
 
@@ -344,7 +354,7 @@ go test ./... -cover
 | Fase | Status | Descrição |
 |---|---|---|
 | Fase 1 — MVP | ✅ Concluída | API Go + n8n + Telegram + SQLite |
-| Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL 📋 · Cloud 📋 |
+| Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL ✅ · Cloud 📋 |
 | Fase 3 — Alertas | ✅ Concluída | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark ✅ · Alocação por setor ✅ · Simulação e-se ✅ |
 | Fase 4 — Performance | ✅ Concluída | Concorrência B3+NYSE ✅ · PATCH setor ✅ |
 | Fase 5 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes · PostgreSQL |

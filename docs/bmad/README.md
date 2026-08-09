@@ -48,23 +48,27 @@ docs/bmad/
     │   ├── 001-multiusuario.md
     │   ├── 002-alertas-preco.md
     │   ├── 003-resumo-semanal-mensal.md
-    │   └── 004-benchmark.md
+    │   ├── 004-benchmark.md
+    │   ├── 008-postgresql.md
+    │   ├── 009-simulacao-e-se.md
+    │   └── 011-market-provider-concorrencia.md
     └── backlog/           ← aguardando aprovação/implementação
-        ├── 005-alocacao-setor.md
-        ├── 006-dividendos.md
-        ├── 007-resumo-llm.md
-        ├── 008-postgresql.md
-        └── 009-simulacao-e-se.md
+        └── 007-resumo-llm.md
 ```
 
 ## Stories do backlog
 
-| ID | Story | Prioridade |
-|----|-------|------------|
-| 005 | Alocação por setor | Alta |
+| ID | Story | Status |
+|----|-------|--------|
+| 001 | Multiusuário | ✅ Done |
+| 002 | Alertas de preço | ✅ Done |
+| 003 | Resumo semanal/mensal | ✅ Done |
+| 004 | Benchmark IBOV/S&P500 | ✅ Done |
+| 005 | Alocação por setor | ✅ Done |
 | 006 | Notificação de dividendos | ❌ Cancelado — Brapi e Twelve Data exigem plano pago |
-| 007 | Resumo LLM (Claude API) | Média |
-| 008 | Migração PostgreSQL | Alta |
+| 007 | Resumo LLM (Claude API) | 📋 Backlog — Média |
+| 008 | Migração PostgreSQL | ✅ Done |
 | 009 | Simulação "e se" | ✅ Done |
+| 010 | Envelope `telegram_id` na response | ✅ Done |
 | 011 | Concorrência no Market Provider | ✅ Done |
 | 012 | Brapi Batch Request | ❌ Cancelado — plano free limita 1 ativo/request |
