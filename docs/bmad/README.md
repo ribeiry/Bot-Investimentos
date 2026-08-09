@@ -57,7 +57,8 @@ docs/bmad/
         ├── 013-get-user-me.md
         ├── 014-telegram-id-unico.md
         ├── 015-menu-interativo-telegram.md
-        └── 016-n8n-ajuste-endpoints-response.md
+        ├── 016-n8n-ajuste-endpoints-response.md
+        └── 017-n8n-mapping-telegram-apikey.md
 ```
 
 ## Stories do backlog
@@ -80,3 +81,4 @@ docs/bmad/
 | 014 | Validação telegram_id único | 📋 Backlog — Média |
 | 015 | Menu interativo no Telegram (n8n) | 📋 Backlog — Média |
 | 016 | Ajuste n8n para novos endpoints + envelope | 📋 Backlog — Alta |
+| 017 | Mapping telegram_id → api_key no n8n | 📋 Backlog — Alta |
