@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: portfolio_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=portfolio
+      - POSTGRES_PASSWORD=portfolio
+      - POSTGRES_DB=portfolio
+      - TZ=America/Sao_Paulo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio -d portfolio"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - portfolio-network
+
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: n8n_automation
@@ -13,6 +34,7 @@ services:
       - portfolio-network
     volumes:
       - n8n_data:/home/node/.n8n
+
   portifolio-api:
     build:
       context: .
@@ -21,17 +43,21 @@ services:
       - "8080:8080"
     environment:
       - TZ=America/Sao_Paulo
+      - DATABASE_URL=postgres://portfolio:portfolio@postgres:5432/portfolio?sslmode=disable
       - API_KEY=${API_KEY}
       - BRAPI_TOKEN=${BRAPI_TOKEN}
       - ALPHA_KEY=${ALPHA_KEY}
       - TWELVE_DATA_KEY=${TWELVE_DATA_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - portfolio-network
-    volumes:
-      - sqlite-data:/root/data
+
 volumes:
   n8n_data:
-  sqlite-data:
+  postgres-data:
+
 networks:
   portfolio-network:
     driver: bridge

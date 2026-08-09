@@ -15,9 +15,7 @@ func NewPriceHistoryRepository(db *sql.DB) *priceHistoryRepository {
 }
 
 func (r priceHistoryRepository) Save(asset domain.PriceHistory) error {
-
-	query := `INSERT INTO price_history (ticker, price, captured_at) VALUES (?, ?, ?)`
-
+	query := `INSERT INTO price_history (ticker, price, captured_at) VALUES ($1, $2, $3)`
 	_, err := r.db.Exec(query, asset.Ticker, asset.Price, asset.CapturedAt)
 	return err
 }
@@ -25,7 +23,7 @@ func (r priceHistoryRepository) Save(asset domain.PriceHistory) error {
 func (r priceHistoryRepository) GetLastPrice(ticker string) (float64, error) {
 	var price float64
 	err := r.db.QueryRow(
-		"SELECT price FROM price_history WHERE ticker = ? ORDER BY captured_at DESC LIMIT 1",
+		"SELECT price FROM price_history WHERE ticker = $1 ORDER BY captured_at DESC LIMIT 1",
 		ticker,
 	).Scan(&price)
 	if err != nil {
@@ -38,7 +36,7 @@ func (r priceHistoryRepository) GetPriceAtDate(ticker string, date time.Time) (f
 	var price float64
 	err := r.db.QueryRow(
 		`SELECT price FROM price_history
-		 WHERE ticker = ? AND captured_at <= ?
+		 WHERE ticker = $1 AND captured_at <= $2
 		 ORDER BY captured_at DESC LIMIT 1`,
 		ticker, date,
 	).Scan(&price)

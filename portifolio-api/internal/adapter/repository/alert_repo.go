@@ -16,18 +16,18 @@ func NewAlertRepository(db *sql.DB) *alertRepository {
 func (r alertRepository) Upsert(alert domain.Alert) error {
 	query := `
 	INSERT INTO alerts (user_id, ticker, market, stop_gain, stop_loss, active)
-	VALUES (?, ?, ?, ?, ?, 1)
+	VALUES ($1, $2, $3, $4, $5, TRUE)
 	ON CONFLICT (user_id, ticker) DO UPDATE SET
 		stop_gain = EXCLUDED.stop_gain,
 		stop_loss = EXCLUDED.stop_loss,
-		active = 1`
+		active = TRUE`
 	_, err := r.db.Exec(query, alert.UserID, alert.Ticker, alert.Market, alert.StopGain, alert.StopLoss)
 	return err
 }
 
 func (r alertRepository) GetAllByUserID(userID int64) ([]domain.Alert, error) {
 	query := `SELECT id, user_id, ticker, market, stop_gain, stop_loss, active, created_at
-	          FROM alerts WHERE user_id = ? AND active = 1;`
+	          FROM alerts WHERE user_id = $1 AND active = TRUE;`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -47,6 +47,6 @@ func (r alertRepository) GetAllByUserID(userID int64) ([]domain.Alert, error) {
 }
 
 func (r alertRepository) DeleteByTicker(userID int64, ticker string) error {
-	_, err := r.db.Exec("DELETE FROM alerts WHERE user_id = ? AND ticker = ?;", userID, ticker)
+	_, err := r.db.Exec("DELETE FROM alerts WHERE user_id = $1 AND ticker = $2;", userID, ticker)
 	return err
 }

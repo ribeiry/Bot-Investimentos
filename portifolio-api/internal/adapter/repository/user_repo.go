@@ -17,7 +17,7 @@ func NewUserRepository(db *sql.DB) *userRepository {
 
 func (r userRepository) FindByAPIKey(apiKey string) (*domain.User, error) {
 	var user domain.User
-	query := "SELECT id, telegram_id, name, api_key, created_at FROM users WHERE api_key = ?;"
+	query := "SELECT id, telegram_id, name, api_key, created_at FROM users WHERE api_key = $1;"
 	row := r.db.QueryRow(query, apiKey)
 	if err := row.Scan(&user.ID, &user.TelegramID, &user.Name, &user.APIKey, &user.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
@@ -35,13 +35,9 @@ func (r userRepository) Create(user domain.User) (*domain.User, error) {
 	}
 	user.APIKey = apiKey
 
-	query := "INSERT INTO users (telegram_id, name, api_key) VALUES (?, ?, ?);"
-	result, err := r.db.Exec(query, user.TelegramID, user.Name, user.APIKey)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
+	query := "INSERT INTO users (telegram_id, name, api_key) VALUES ($1, $2, $3) RETURNING id;"
+	var id int64
+	if err := r.db.QueryRow(query, user.TelegramID, user.Name, user.APIKey).Scan(&id); err != nil {
 		return nil, err
 	}
 	user.ID = id
