@@ -53,7 +53,8 @@ docs/bmad/
     │   ├── 009-simulacao-e-se.md
     │   └── 011-market-provider-concorrencia.md
     └── backlog/           ← aguardando aprovação/implementação
-        └── 007-resumo-llm.md
+        ├── 007-resumo-llm.md
+        └── 013-get-user-me.md
 ```
 
 ## Stories do backlog
@@ -72,3 +73,4 @@ docs/bmad/
 | 010 | Envelope `telegram_id` na response | ✅ Done |
 | 011 | Concorrência no Market Provider | ✅ Done |
 | 012 | Brapi Batch Request | ❌ Cancelado — plano free limita 1 ativo/request |
+| 013 | GET /users/me | 📋 Backlog — Baixa |
