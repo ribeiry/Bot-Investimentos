@@ -14,6 +14,7 @@ func RunMigrations(db *sql.DB) error {
 		{"createPortfolioTable", createPortfolioTable},
 		{"createPriceHistoryTable", createPriceHistoryTable},
 		{"createAlertsTable", createAlertsTable},
+		{"addUsersTelegramIDUniqueIndex", addUsersTelegramIDUniqueIndex},
 	}
 
 	for _, m := range migrations {
@@ -67,6 +68,11 @@ func createPriceHistoryTable(db *sql.DB) error {
 		price       DECIMAL(10,2) NOT NULL,
 		captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`)
+	return err
+}
+
+func addUsersTelegramIDUniqueIndex(db *sql.DB) error {
+	_, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);`)
 	return err
 }
 

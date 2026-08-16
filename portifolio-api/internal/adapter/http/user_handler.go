@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
+	"portifolio-api/internal/domain"
 	usecaseuser "portifolio-api/internal/usecase/user"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +25,10 @@ func (h UserHandler) CreateUser(c *gin.Context) {
 	}
 	user, err := h.createUser.Execute(input)
 	if err != nil {
+		if errors.Is(err, domain.ErrTelegramIDAlreadyExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

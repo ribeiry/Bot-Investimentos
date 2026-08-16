@@ -28,6 +28,19 @@ func (r userRepository) FindByAPIKey(apiKey string) (*domain.User, error) {
 	return &user, nil
 }
 
+func (r userRepository) FindByTelegramID(telegramID string) (*domain.User, error) {
+	var user domain.User
+	query := "SELECT id, telegram_id, name, api_key, created_at FROM users WHERE telegram_id = $1;"
+	row := r.db.QueryRow(query, telegramID)
+	if err := row.Scan(&user.ID, &user.TelegramID, &user.Name, &user.APIKey, &user.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r userRepository) Create(user domain.User) (*domain.User, error) {
 	apiKey, err := generateAPIKey()
 	if err != nil {

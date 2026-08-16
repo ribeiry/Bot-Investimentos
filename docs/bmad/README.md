@@ -51,11 +51,11 @@ docs/bmad/
     │   ├── 004-benchmark.md
     │   ├── 008-postgresql.md
     │   ├── 009-simulacao-e-se.md
-    │   └── 011-market-provider-concorrencia.md
+    │   ├── 011-market-provider-concorrencia.md
+    │   └── 014-telegram-id-unico.md
     └── backlog/           ← aguardando aprovação/implementação
         ├── 007-resumo-llm.md
         ├── 013-get-user-me.md
-        ├── 014-telegram-id-unico.md
         ├── 015-menu-interativo-telegram.md
         ├── 016-n8n-ajuste-endpoints-response.md
         └── 017-n8n-mapping-telegram-apikey.md
@@ -78,7 +78,7 @@ docs/bmad/
 | 011 | Concorrência no Market Provider | ✅ Done |
 | 012 | Brapi Batch Request | ❌ Cancelado — plano free limita 1 ativo/request |
 | 013 | GET /users/me | 📋 Backlog — Baixa |
-| 014 | Validação telegram_id único | 📋 Backlog — Média |
+| 014 | Validação telegram_id único | ✅ Done |
 | 015 | Menu interativo no Telegram (n8n) | 📋 Backlog — Média |
 | 016 | Ajuste n8n para novos endpoints + envelope | 📋 Backlog — Alta |
 | 017 | Mapping telegram_id → api_key no n8n | 📋 Backlog — Alta |
