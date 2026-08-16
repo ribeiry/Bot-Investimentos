@@ -17,6 +17,24 @@ func NewUserHandler(createUser usecaseuser.CreateUserUseCase) *UserHandler {
 	return &UserHandler{createUser: createUser}
 }
 
+func (h UserHandler) GetMe(c *gin.Context) {
+	value, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	user := value.(*domain.User)
+	c.JSON(http.StatusOK, gin.H{
+		"telegram_id": user.TelegramID,
+		"data": gin.H{
+			"id":          user.ID,
+			"telegram_id": user.TelegramID,
+			"name":        user.Name,
+			"created_at":  user.CreatedAt,
+		},
+	})
+}
+
 func (h UserHandler) CreateUser(c *gin.Context) {
 	var input usecaseuser.CreateUserInput
 	if err := c.ShouldBindJSON(&input); err != nil {

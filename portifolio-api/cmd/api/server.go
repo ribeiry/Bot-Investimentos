@@ -94,6 +94,12 @@ func ConfigRoutes(
 
 	router.POST("/users", userHandler.CreateUser)
 
+	users := router.Group("/users")
+	users.Use(middleware.Auth(userRepo))
+	{
+		users.GET("/me", userHandler.GetMe)
+	}
+
 	portfolio := router.Group("/portfolio")
 	portfolio.Use(middleware.Auth(userRepo))
 	{
