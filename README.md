@@ -149,6 +149,12 @@ n8n:
 
 > Todas as respostas incluem `telegram_id` para o n8n saber para qual chat enviar.
 
+#### Usuários
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/users/me` | Retorna dados do usuário autenticado (sem `api_key`) |
+
 #### Portfolio
 
 | Método | Rota | Descrição |
