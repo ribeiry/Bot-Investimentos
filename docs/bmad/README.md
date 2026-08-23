@@ -44,24 +44,29 @@ docs/bmad/
 │   ├── dev.md
 │   └── qa.md
 └── stories/
-    ├── done/              ← stories concluídas
+    ├── done/              ← stories concluídas (código Go)
     │   ├── 001-multiusuario.md
     │   ├── 002-alertas-preco.md
     │   ├── 003-resumo-semanal-mensal.md
     │   ├── 004-benchmark.md
+    │   ├── 005-alocacao-setor.md
     │   ├── 008-postgresql.md
     │   ├── 009-simulacao-e-se.md
+    │   ├── 010-telegram-id-response.md
     │   ├── 011-market-provider-concorrencia.md
     │   ├── 013-get-user-me.md
     │   └── 014-telegram-id-unico.md
-    └── backlog/           ← aguardando aprovação/implementação
-        ├── 007-resumo-llm.md
+    ├── backlog/           ← aguardando aprovação/implementação (API Go)
+    │   └── 007-resumo-llm.md
+    └── n8n/               ← workflows do n8n (sem código Go)
         ├── 015-menu-interativo-telegram.md
         ├── 016-n8n-ajuste-endpoints-response.md
         └── 017-n8n-mapping-telegram-apikey.md
 ```
 
-## Stories do backlog
+## Status geral
+
+### API Go
 
 | ID | Story | Status |
 |----|-------|--------|
@@ -70,15 +75,20 @@ docs/bmad/
 | 003 | Resumo semanal/mensal | ✅ Done |
 | 004 | Benchmark IBOV/S&P500 | ✅ Done |
 | 005 | Alocação por setor | ✅ Done |
-| 006 | Notificação de dividendos | ❌ Cancelado — Brapi e Twelve Data exigem plano pago |
+| 006 | Notificação de dividendos | ❌ Cancelado — APIs exigem plano pago |
 | 007 | Resumo LLM (Claude API) | 📋 Backlog — Média |
 | 008 | Migração PostgreSQL | ✅ Done |
 | 009 | Simulação "e se" | ✅ Done |
 | 010 | Envelope `telegram_id` na response | ✅ Done |
 | 011 | Concorrência no Market Provider | ✅ Done |
-| 012 | Brapi Batch Request | ❌ Cancelado — plano free limita 1 ativo/request |
+| 012 | Brapi Batch Request | ❌ Cancelado — free limita 1 ativo/request |
 | 013 | GET /users/me | ✅ Done |
 | 014 | Validação telegram_id único | ✅ Done |
-| 015 | Menu interativo no Telegram (n8n) | 📋 Backlog — Média |
-| 016 | Ajuste n8n para novos endpoints + envelope | 📋 Backlog — Alta |
-| 017 | Mapping telegram_id → api_key no n8n | 📋 Backlog — Alta |
+
+### Workflows n8n
+
+| ID | Story | Status |
+|----|-------|--------|
+| 015 | Menu interativo no Telegram | 📋 Pendente — Média |
+| 016 | Ajuste endpoints + envelope | 📋 Pendente — Alta |
+| 017 | Mapping telegram_id → api_key | 📋 Pendente — Alta |
