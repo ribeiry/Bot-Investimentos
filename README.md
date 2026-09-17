@@ -18,7 +18,8 @@ Bot de monitoramento de carteira de investimentos integrado ao Telegram, constru
 - **Comparação com benchmark** — carteira vs IBOV e S&P500 por período
 - **Alocação por setor** — percentual do patrimônio em cada setor (setor informado manualmente no cadastro do ativo)
 - **Simulação "e se"** — simula operações hipotéticas (venda/compra) e compara carteira atual vs simulada com delta de retorno
-- **Concorrência no provider** — B3 e NYSE/NASDAQ buscados em goroutines paralelas
+- **Concorrência no provider** — B3 e NYSE/NASDAQ buscados em goroutines paralelas com dedupe via `singleflight` (chamadas concorrentes para os mesmos tickers viram 1 request HTTP)
+- **Resumo em linguagem natural (LLM)** — narrativa do portfólio gerada via Groq com cache 1h, rate limit por usuário, totais pré-calculados no snapshot (anti-alucinação) e validação heurística de tickers
 
 ---
 
@@ -58,15 +59,18 @@ portifolio-api/
     ├── usecase/          ← regras de negócio
     │   ├── alert/
     │   ├── market/
-    │   ├── portifolio/
+    │   ├── portifolio/    (inclui narrative + aggregator + validator LLM)
     │   └── user/
     ├── adapter/          ← handlers HTTP e repositórios
     │   ├── http/
     │   │   └── middleware/
     │   └── repository/
-    ├── infra/            ← PostgreSQL, Brapi, Twelve Data
+    ├── infra/            ← PostgreSQL, Brapi, Twelve Data, Groq, cache, ratelimit
+    │   ├── cache/
     │   ├── db/
-    │   └── market/
+    │   ├── llm/
+    │   ├── market/       (single-flight + fail-loud providers)
+    │   └── ratelimit/
     └── mocks/            ← mocks para testes
 ```
 
@@ -92,6 +96,15 @@ BRAPI_TOKEN=seu-token-brapi
 TWELVE_DATA_KEY=seu-token-twelve-data
 TELEGRAM_CHAT_ID=seu-chat-id
 DATABASE_URL=postgres://portfolio:portfolio@localhost:5432/portfolio?sslmode=disable
+
+# Resumo LLM (Groq)
+GROQ_API_KEY=gsk_...
+GROQ_ENDPOINT=https://api.groq.com/openai/v1/chat/completions
+GROQ_MODEL=llama-3.3-70b-versatile    # opcional
+LLM_RESPONSE_DEADLINE_MS=500          # opcional
+LLM_USER_RATE_LIMIT_PER_DAY=5         # opcional
+LLM_RATE_LIMIT_PER_MINUTE=25          # opcional
+LLM_RATE_LIMIT_PER_DAY=12000          # opcional
 ```
 
 > **Nota:** não há `API_KEY` global — cada usuário tem sua própria chave gerada via `POST /users`.
@@ -170,6 +183,7 @@ n8n:
 | `GET` | `/portfolio/allocation` | Alocação por setor com percentual do patrimônio |
 | `PATCH` | `/portfolio/assets/:ticker/sector` | Atualiza ou limpa o setor de um ativo |
 | `POST` | `/portfolio/simulate` | Simula operações hipotéticas — retorna current, simulated e delta |
+| `GET` | `/portfolio/summary/narrative` | Resumo em linguagem natural (Groq); cache 1h, rate limit 5/dia por usuário |
 
 #### Market
 
@@ -301,6 +315,32 @@ curl "http://localhost:8080/portfolio/benchmark?period=weekly" \
 }
 ```
 
+### Resumo em linguagem natural (LLM)
+
+```bash
+curl http://localhost:8080/portfolio/summary/narrative \
+  -H "X-API-Key: <sua-key>"
+```
+
+Resposta (sucesso):
+
+```json
+{
+  "telegram_id": "123",
+  "data": { "text": "📊 Sua carteira **subiu 2,1%** na semana..." }
+}
+```
+
+Comportamento:
+- Cache 1h por usuário (chamadas repetidas não consomem quota LLM).
+- Se LLM demora > 500ms, retorna `⏳ Estamos processando...` e cacheia o resultado em background.
+- Rate limit por usuário (5/dia): resposta **HTTP 429** com `error: "limite diário atingido..."`.
+- Rate limit global (25/min, 12k/dia) ou falha do LLM: fallback silencioso `"Não foi possível gerar o resumo agora..."`.
+- Carteira vazia: texto fixo, sem chamar LLM.
+- Validador heurístico descarta narrativas com tickers fora do portfólio (anti-alucinação).
+- **Totais pré-calculados** (Story 015): snapshot enviado ao LLM contém `totals` (invested/current/profit-loss/return%) computados em Go — prompt proíbe LLM de somar por conta própria.
+- **Benchmark não-fatal**: se S&P500 falhar (Twelve Data free), narrativa é gerada sem seção de benchmark em vez de quebrar.
+
 ### Criar alerta de stop gain e stop loss
 
 ```bash
@@ -345,13 +385,15 @@ go test ./... -cover
 
 | Pacote | Testes |
 |---|---|
-| `usecase/alert` | 17 testes |
+| `usecase/alert` | 21 testes |
 | `usecase/market` | 8 testes |
-| `usecase/portifolio` | 44 testes |
-| `usecase/user` | 4 testes |
-| `adapter/http` | 37 testes |
+| `usecase/portifolio` | 87 testes |
+| `usecase/user` | 6 testes |
+| `adapter/http` | 42 testes |
 | `adapter/http/middleware` | 4 testes |
-| **Total** | **143 testes** |
+| `infra/market` | 7 testes |
+| `infra/ratelimit` | 4 testes |
+| **Total** | **179 testes** |
 
 ---
 
@@ -361,8 +403,9 @@ go test ./... -cover
 |---|---|---|
 | Fase 1 — MVP | ✅ Concluída | API Go + n8n + Telegram + SQLite |
 | Fase 2 — Deploy | 🚧 Em andamento | Multiusuário ✅ · PostgreSQL ✅ · Cloud 📋 |
-| Fase 3 — Alertas | ✅ Concluída | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark ✅ · Alocação por setor ✅ · Simulação e-se ✅ |
-| Fase 4 — Performance | ✅ Concluída | Concorrência B3+NYSE ✅ · PATCH setor ✅ |
-| Fase 5 — LLM | 📋 Backlog | Integração Claude API, resumos inteligentes · PostgreSQL |
+| Fase 3 — Alertas | ✅ Concluída | Stop gain/loss ✅ · Resumo semanal/mensal ✅ · Benchmark ✅ · Alocação por setor ✅ · Simulação e-se ✅ · Dividendos ❌ (sem provider gratuito) |
+| Fase 4 — Performance | ✅ Concluída | Concorrência B3+NYSE ✅ · PATCH setor ✅ · single-flight no provider ✅ |
+| Fase 5 — LLM | ✅ Concluída | Resumo narrativo via Groq ✅ · cache in-memory ✅ · rate limits ✅ · anti-alucinação de totais ✅ |
+| Fase 6 — Produção | 📋 Backlog | `.env.example` · CI GitHub Actions · migrations versionadas · cloud deploy · logs estruturados |
 
 Detalhes e priorização: [BACKLOG.md](./BACKLOG.md)

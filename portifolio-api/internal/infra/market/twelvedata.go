@@ -3,6 +3,8 @@ package market
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"portifolio-api/internal/domain"
 	"strconv"
@@ -58,35 +60,11 @@ func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote,
 		url := fmt.Sprintf("https://api.twelvedata.com/quote?symbol=%s&apikey=%s",
 			strings.Join(symbols, ","), t.apiKey)
 
-		resp, err := t.client.Get(url)
+		batchQuotes, err := t.fetchBatch(url, batch)
 		if err != nil {
-			continue
+			return nil, err
 		}
-		defer resp.Body.Close()
-
-		if len(batch) == 1 {
-			var single twelveDataSingleResponse
-			json.NewDecoder(resp.Body).Decode(&single)
-			if single.Symbol != "" && single.Close != "" {
-				price, _ := strconv.ParseFloat(single.Close, 64)
-				quotes = append(quotes, domain.Quote{
-					Ticker:       single.Symbol,
-					CurrentValue: price,
-					QuotedAt:     time.Now(),
-				})
-			}
-		} else {
-			var batchResp twelveDataMultiResponse
-			json.NewDecoder(resp.Body).Decode(&batchResp)
-			for ticker, data := range batchResp {
-				price, _ := strconv.ParseFloat(data.Close, 64)
-				quotes = append(quotes, domain.Quote{
-					Ticker:       ticker,
-					CurrentValue: price,
-					QuotedAt:     time.Now(),
-				})
-			}
-		}
+		quotes = append(quotes, batchQuotes...)
 
 		// delay entre lotes para respeitar rate limit
 		if end < len(usaAssets) {
@@ -95,4 +73,76 @@ func (t twelveDataProvider) GetByTickers(assets []domain.Asset) ([]domain.Quote,
 	}
 
 	return quotes, nil
+}
+
+func (t twelveDataProvider) fetchBatch(url string, batch []domain.Asset) ([]domain.Quote, error) {
+	resp, err := t.client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("twelvedata http error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("twelvedata read body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("[twelvedata] status=%d body=%s", resp.StatusCode, truncate(string(body), 200))
+		return nil, fmt.Errorf("twelvedata http %d", resp.StatusCode)
+	}
+
+	if len(batch) == 1 {
+		return parseSingleQuote(body)
+	}
+	return parseBatchQuotes(body)
+}
+
+func parseSingleQuote(body []byte) ([]domain.Quote, error) {
+	var single twelveDataSingleResponse
+	if err := json.Unmarshal(body, &single); err != nil {
+		return nil, fmt.Errorf("twelvedata decode single: %w (body=%s)", err, truncate(string(body), 200))
+	}
+	if single.Symbol == "" || single.Close == "" {
+		return nil, fmt.Errorf("twelvedata empty single response: %s", truncate(string(body), 200))
+	}
+	price, err := strconv.ParseFloat(single.Close, 64)
+	if err != nil {
+		return nil, fmt.Errorf("twelvedata parse price %q: %w", single.Close, err)
+	}
+	return []domain.Quote{{
+		Ticker:       single.Symbol,
+		CurrentValue: price,
+		QuotedAt:     time.Now(),
+	}}, nil
+}
+
+func parseBatchQuotes(body []byte) ([]domain.Quote, error) {
+	var batchResp twelveDataMultiResponse
+	if err := json.Unmarshal(body, &batchResp); err != nil {
+		return nil, fmt.Errorf("twelvedata decode batch: %w (body=%s)", err, truncate(string(body), 200))
+	}
+	if len(batchResp) == 0 {
+		return nil, fmt.Errorf("twelvedata empty batch response: %s", truncate(string(body), 200))
+	}
+	quotes := make([]domain.Quote, 0, len(batchResp))
+	for ticker, data := range batchResp {
+		price, err := strconv.ParseFloat(data.Close, 64)
+		if err != nil {
+			return nil, fmt.Errorf("twelvedata parse price ticker=%s value=%q: %w", ticker, data.Close, err)
+		}
+		quotes = append(quotes, domain.Quote{
+			Ticker:       ticker,
+			CurrentValue: price,
+			QuotedAt:     time.Now(),
+		})
+	}
+	return quotes, nil
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
 }

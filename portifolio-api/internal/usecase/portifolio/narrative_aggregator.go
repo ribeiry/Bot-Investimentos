@@ -1,12 +1,37 @@
 package portifolio
 
-import "sync"
+import (
+	"log"
+	"portifolio-api/internal/domain"
+	"sync"
+)
+
+type portfolioTotals struct {
+	Invested         float64 `json:"invested_value"`
+	Current          float64 `json:"current_value"`
+	ProfitLoss       float64 `json:"profit_loss"`
+	ReturnPercentage float64 `json:"return_percentage"`
+}
 
 type portfolioSnapshot struct {
-	Summary     any `json:"summary"`
-	Performance any `json:"performance"`
-	Benchmark   any `json:"benchmark"`
-	Allocation  any `json:"allocation"`
+	Totals      portfolioTotals `json:"totals"`
+	Summary     any             `json:"summary"`
+	Performance any             `json:"performance"`
+	Benchmark   any             `json:"benchmark"`
+	Allocation  any             `json:"allocation"`
+}
+
+func computeTotals(performance []domain.AssetPerformance) portfolioTotals {
+	totals := portfolioTotals{}
+	for _, asset := range performance {
+		totals.Invested += asset.InvestedValue
+		totals.Current += asset.CurrentValue
+	}
+	totals.ProfitLoss = totals.Current - totals.Invested
+	if totals.Invested > 0 {
+		totals.ReturnPercentage = totals.ProfitLoss / totals.Invested * 100
+	}
+	return totals
 }
 
 type aggregationState struct {
@@ -42,9 +67,10 @@ func (state *aggregationState) setAllocation(allocation any) {
 	state.mutex.Unlock()
 }
 
-func (state *aggregationState) setPerformance(performance any, tickers []string) {
+func (state *aggregationState) setPerformance(performance []domain.AssetPerformance, tickers []string) {
 	state.mutex.Lock()
 	state.snapshot.Performance = performance
+	state.snapshot.Totals = computeTotals(performance)
 	state.tickers = tickers
 	state.mutex.Unlock()
 }
@@ -94,7 +120,7 @@ func (usecase GetNarrativeUseCase) loadBenchmark(userID int64, state *aggregatio
 	defer waitGroup.Done()
 	benchmark, err := usecase.getBenchmark.Execute(userID, "weekly")
 	if err != nil {
-		state.recordError(err)
+		log.Printf("[narrative] user=%d benchmark_err=%v (não-fatal)", userID, err)
 		return
 	}
 	state.setBenchmark(benchmark)

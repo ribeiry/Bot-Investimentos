@@ -3,22 +3,37 @@ package market
 import (
 	"log"
 	"portifolio-api/internal/domain"
+	"sort"
+	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 type marketProviderWithFallback struct {
 	brapi        domain.MarketProvider
 	twelveData   domain.MarketProvider
 	priceHistory domain.PriceHistoryRepository
+	flight       *singleflight.Group
 }
 
 func NewMarketProviderWithFallback(brapi domain.MarketProvider, twelveData domain.MarketProvider, priceHistory domain.PriceHistoryRepository) domain.MarketProvider {
-	return marketProviderWithFallback{
+	return &marketProviderWithFallback{
 		brapi:        brapi,
 		twelveData:   twelveData,
 		priceHistory: priceHistory,
+		flight:       &singleflight.Group{},
 	}
+}
+
+func buildAssetsKey(assets []domain.Asset) string {
+	parts := make([]string, len(assets))
+	for i, a := range assets {
+		parts[i] = a.Ticker + ":" + a.Market
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ",")
 }
 
 type providerResult struct {
@@ -26,13 +41,30 @@ type providerResult struct {
 	err    error
 }
 
-func (m marketProviderWithFallback) GetByTickers(assets []domain.Asset) ([]domain.Quote, error) {
+func (m *marketProviderWithFallback) GetByTickers(assets []domain.Asset) ([]domain.Quote, error) {
+	if len(assets) == 0 {
+		return nil, nil
+	}
+
+	key := buildAssetsKey(assets)
+	result, err, shared := m.flight.Do(key, func() (interface{}, error) {
+		return m.fetchQuotes(assets)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if shared {
+		log.Printf("[Provider] singleflight_shared key=%s", key)
+	}
+	return result.([]domain.Quote), nil
+}
+
+func (m *marketProviderWithFallback) fetchQuotes(assets []domain.Asset) ([]domain.Quote, error) {
 	var b3Assets []domain.Asset
 	var usaAssets []domain.Asset
 
 	log.Printf("[Provider] Total assets: %d", len(assets))
 	for _, asset := range assets {
-		log.Printf("[Provider] asset: %s market: '%s'", asset.Ticker, asset.Market)
 		if asset.Market == "B3" {
 			b3Assets = append(b3Assets, asset)
 		} else {

@@ -11,19 +11,26 @@ Modelo default: `llama-3.3-70b-versatile`.
 
 ### Critérios de Aceitação
 
-- [ ] AC1: `GET /portfolio/summary/narrative` autenticado
-- [ ] AC2: Agrega dados de 4 use cases (summary + performance + benchmark + allocation) em paralelo
-- [ ] AC3: Chama Groq com prompt carregado em memória no boot
-- [ ] AC4: Envelope `{"telegram_id": "...", "data": {"text": "..."}}`
-- [ ] AC5: Cache in-memory 1h por `user_id`
-- [ ] AC6: Rate limit por usuário: 5/dia → HTTP **429** loud
-- [ ] AC7: Rate limit global: 25/min + 12.000/dia → fallback silencioso
-- [ ] AC8: Deadline de resposta 500ms — se LLM demora mais, retorna fallback amigável mas processa em background e cacheia
-- [ ] AC9: Validação heurística: resposta com ticker fora do portfólio → descartada + fallback
-- [ ] AC10: Carteira vazia → texto fixo, sem consumir LLM
-- [ ] AC11: Prompt em `config/llm_prompt.txt`, carregado 1x no boot (`log.Fatal` se ausente)
-- [ ] AC12: Testes unitários com mocks (padrão limpo, sem `r0/r1/rf`)
-- [ ] AC13: Log estruturado por chamada (cache hit/miss, timeout, validação)
+- [x] AC1: `GET /portfolio/summary/narrative` autenticado
+- [x] AC2: Agrega dados de 4 use cases (summary + performance + benchmark + allocation) em paralelo
+- [x] AC3: Chama Groq com prompt carregado em memória no boot
+- [x] AC4: Envelope `{"telegram_id": "...", "data": {"text": "..."}}`
+- [x] AC5: Cache in-memory 1h por `user_id`
+- [x] AC6: Rate limit por usuário: 5/dia → HTTP **429** loud
+- [x] AC7: Rate limit global: 25/min + 12.000/dia → fallback silencioso
+- [x] AC8: Deadline de resposta 500ms — se LLM demora mais, retorna fallback amigável mas processa em background e cacheia
+- [x] AC9: Validação heurística: resposta com ticker fora do portfólio → descartada + fallback
+- [x] AC10: Carteira vazia → texto fixo, sem consumir LLM
+- [x] AC11: Prompt em `config/llm_prompt.txt`, carregado 1x no boot (`log.Fatal` se ausente)
+- [x] AC12: Testes unitários com mocks (padrão limpo, sem `r0/r1/rf`)
+- [x] AC13: Log estruturado por chamada (cache hit/miss, timeout, validação)
+
+### Status: ✅ Concluído
+
+- 9 cenários de teste do use case + 2 do handler passando (`go test ./... -race`).
+- Wiring completo em `cmd/api/server.go`; falha o boot se `GROQ_API_KEY`/`GROQ_ENDPOINT`/prompt ausentes.
+- Rota exposta em `GET /portfolio/summary/narrative` (grupo autenticado).
+- README atualizado com exemplo de uso e comportamento.
 
 ### Env vars
 
