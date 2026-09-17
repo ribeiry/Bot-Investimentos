@@ -3,12 +3,17 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	httphandler "portifolio-api/internal/adapter/http"
 	"portifolio-api/internal/adapter/http/middleware"
 	"portifolio-api/internal/adapter/repository"
 	"portifolio-api/internal/domain"
+	"portifolio-api/internal/infra/cache"
 	"portifolio-api/internal/infra/db"
+	"portifolio-api/internal/infra/llm"
+	"portifolio-api/internal/infra/ratelimit"
 
 	inframarket "portifolio-api/internal/infra/market"
 	usecasemarket "portifolio-api/internal/usecase/market"
@@ -19,6 +24,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
 
 func Run() {
 	log.Println("Request Recived RUN HANDLER")
@@ -59,6 +73,41 @@ func Run() {
 	updateSectorUseCase := portifolio.NewUpdateSectorUseCase(portifolioRepo)
 	simulateUseCase := portifolio.NewSimulateUseCase(portifolioRepo, marketProvider, priceHistoryRepo)
 
+	groqAPIKey := os.Getenv("GROQ_API_KEY")
+	if groqAPIKey == "" {
+		log.Fatal("GROQ_API_KEY não definida")
+	}
+	groqEndpoint := os.Getenv("GROQ_ENDPOINT")
+	if groqEndpoint == "" {
+		log.Fatal("GROQ_ENDPOINT não definida")
+	}
+	promptPath := "config/llm_prompt.txt"
+	promptBytes, err := os.ReadFile(promptPath)
+	if err != nil {
+		log.Fatalf("falha ao ler prompt template %s: %v", promptPath, err)
+	}
+	llmProvider := llm.NewGroqProvider(groqAPIKey, os.Getenv("GROQ_MODEL"), groqEndpoint)
+	narrativeCache := cache.NewNarrativeCache()
+	userLimiter := ratelimit.NewDailyLimiter(envInt("LLM_USER_RATE_LIMIT_PER_DAY", 5))
+	globalLimiter := ratelimit.NewGlobalLimiter(
+		envInt("LLM_RATE_LIMIT_PER_MINUTE", 25),
+		envInt("LLM_RATE_LIMIT_PER_DAY", 12000),
+	)
+	deadline := time.Duration(envInt("LLM_RESPONSE_DEADLINE_MS", 500)) * time.Millisecond
+
+	getNarrativeUseCase := portifolio.NewGetNarrativeUseCase(
+		getSummaryUseCase,
+		getPerformanceUseCase,
+		getBenchmarkUseCase,
+		getAllocationUseCase,
+		llmProvider,
+		narrativeCache,
+		userLimiter,
+		globalLimiter,
+		string(promptBytes),
+		deadline,
+	)
+
 	log.Println("Iniciando o Market UseCase")
 	getPriceUseCase := usecasemarket.NewGetPricesUseCase(portifolioRepo, marketProvider)
 	getCloseUseCase := usecasemarket.NewGetCloseUseCase(portifolioRepo, marketProvider)
@@ -72,7 +121,7 @@ func Run() {
 
 	alertHandler := httphandler.NewAlertHandler(upsertAlertUseCase, deleteAlertUseCase, getAlertsUseCase, checkAlertsUseCase)
 
-	portfolioHandler := httphandler.NewPortfolioHandler(upsertUseCase, deleteAssetUseCase, getAssetUseCase, getSummaryUseCase, getPerformanceUseCase, getPeriodSummaryUseCase, getBenchmarkUseCase, getAllocationUseCase, updateSectorUseCase, simulateUseCase)
+	portfolioHandler := httphandler.NewPortfolioHandler(upsertUseCase, deleteAssetUseCase, getAssetUseCase, getSummaryUseCase, getPerformanceUseCase, getPeriodSummaryUseCase, getBenchmarkUseCase, getAllocationUseCase, updateSectorUseCase, simulateUseCase, getNarrativeUseCase)
 	marketHandler := httphandler.NewMarketHandler(getCloseUseCase, getPriceUseCase)
 	userHandler := httphandler.NewUserHandler(createUserUseCase)
 
@@ -113,6 +162,7 @@ func ConfigRoutes(
 		portfolio.GET("/benchmark", portfolioHandler.GetBenchmark)
 		portfolio.GET("/allocation", portfolioHandler.GetAllocation)
 		portfolio.POST("/simulate", portfolioHandler.Simulate)
+		portfolio.GET("/summary/narrative", portfolioHandler.GetNarrative)
 	}
 
 	market := router.Group("/market")

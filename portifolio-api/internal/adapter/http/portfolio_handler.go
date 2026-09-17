@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"portifolio-api/internal/domain"
 	"portifolio-api/internal/usecase/portifolio"
@@ -19,6 +20,7 @@ type PortfolioHandler struct {
 	getAllocation    portifolio.GetAllocationUseCase
 	updateSector     portifolio.UpdateSectorUseCase
 	simulate         portifolio.SimulateUseCase
+	getNarrative     portifolio.GetNarrativeUseCase
 }
 
 func NewPortfolioHandler(
@@ -32,6 +34,7 @@ func NewPortfolioHandler(
 	getAllocation portifolio.GetAllocationUseCase,
 	updateSector portifolio.UpdateSectorUseCase,
 	simulate portifolio.SimulateUseCase,
+	getNarrative portifolio.GetNarrativeUseCase,
 ) *PortfolioHandler {
 	return &PortfolioHandler{
 		upsert:           upsert,
@@ -44,6 +47,7 @@ func NewPortfolioHandler(
 		getAllocation:    getAllocation,
 		updateSector:     updateSector,
 		simulate:         simulate,
+		getNarrative:     getNarrative,
 	}
 }
 
@@ -152,6 +156,20 @@ func (h PortfolioHandler) GetBenchmark(c *gin.Context) {
 		return
 	}
 	respond(c, http.StatusOK, result)
+}
+
+func (h PortfolioHandler) GetNarrative(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	text, err := h.getNarrative.Execute(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrRateLimitExceeded) {
+			respondError(c, http.StatusTooManyRequests, err)
+			return
+		}
+		respondError(c, http.StatusInternalServerError, err)
+		return
+	}
+	respond(c, http.StatusOK, gin.H{"text": text})
 }
 
 func (h PortfolioHandler) GetPeriodSummary(c *gin.Context) {

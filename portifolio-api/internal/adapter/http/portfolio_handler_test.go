@@ -45,7 +45,8 @@ func buildPortfolioHandler(assetRepo *mocks.AssetRepository, marketProvider *moc
 	getAllocation := portifolio.NewGetAllocationUseCase(assetRepo, marketProvider)
 	updateSector := portifolio.NewUpdateSectorUseCase(assetRepo)
 	simulate := portifolio.NewSimulateUseCase(assetRepo, marketProvider, priceHistory)
-	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation, updateSector, simulate)
+	var narrative portifolio.GetNarrativeUseCase
+	return NewPortfolioHandler(upsert, delete, getAsset, getSummary, getPerformance, getPeriodSummary, getBenchmark, getAllocation, updateSector, simulate, narrative)
 }
 
 // ─── GetAssets ───────────────────────────────────────────────────────────────
